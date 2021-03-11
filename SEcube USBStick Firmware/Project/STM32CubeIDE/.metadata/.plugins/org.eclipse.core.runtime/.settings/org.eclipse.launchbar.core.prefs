@@ -1,0 +1,12 @@
+LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/arch=x86_64
+LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/name=Local
+LaunchTargetManager/org.eclipse.launchbar.core.launchTargetType.local,Local/os=macosx
+activeLaunchTarget=null\:---
+configDescList=org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:USBStick Debug
+eclipse.preferences.version=1
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:USBStick\ Debug/activeLaunchMode=run
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:USBStick\ Debug/activeLaunchTarget=null\:---
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:USBStick\ Release/activeLaunchMode=run
+org.eclipse.cdt.dsf.gdb.gdbRemotedescriptorType\:USBStick\ Release/activeLaunchTarget=null\:---
+org.eclipse.launchbar.core.descriptorType.default\:USBStick\ Release/activeLaunchMode=run
+org.eclipse.launchbar.core.descriptorType.default\:USBStick\ Release/activeLaunchTarget=org.eclipse.launchbar.core.launchTargetType.local\:Local
