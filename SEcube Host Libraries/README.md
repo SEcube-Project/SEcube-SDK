@@ -4,7 +4,7 @@
 Copyright (C) 2021 Blu5 Labs Ltd.
 
 Repository containing HOST side libraries for the SEcube Project.
-For more information, see the available documentation under the wiki folder.
+For more information, see the available documentation under the wiki folder of the SEcube™ SDK.
 
 ## Licence
 All SEcube releases published on this website are Open Source - GPL 3.0 and are developed by the Academia Community.
