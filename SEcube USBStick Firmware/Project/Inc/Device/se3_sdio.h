@@ -1,10 +1,10 @@
 /**
   ******************************************************************************
-  * File Name          : FPGA.h
-  * Description        : FPGA Primitives
+  * File Name          : se3_sdio.h
+  * Description        : SEcube MicroSD interface
   ******************************************************************************
   *
-  * Copyright � 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
@@ -22,12 +22,19 @@
   ******************************************************************************
   */
 
-#ifndef APPLICATION_SRC_FPGA_H_
-#define APPLICATION_SRC_FPGA_H_
+#pragma once
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
 
-int32_t     B5_FPGA_Programming (void);
-void        B5_FPGA_SetMux (uint8_t mux);
-void        B5_FPGA_FpgaCpuGPIO (uint8_t gpioNum, GPIO_PinState set);
+#define SD_DATATIMEOUT ((uint32_t)100000000)
+#define MEM_OP_FAIL (1)
+#define MEM_OP_OK (0)
+#define STORAGE_LUN_NBR (1)
+#define STORAGE_BLK_SIZ (512)
 
+bool secube_sdio_read(uint8_t lun, uint8_t* buf, uint32_t blk_addr, uint16_t blk_len);
+bool secube_sdio_write(uint8_t lun, const uint8_t* buf, uint32_t blk_addr, uint16_t blk_len);
+bool secube_sdio_capacity(uint32_t *block_num, uint16_t *block_size);
+bool secube_sdio_isready(void);
 
-#endif /* APPLICATION_SRC_FPGA_H_ */

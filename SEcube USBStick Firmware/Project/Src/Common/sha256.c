@@ -1,10 +1,11 @@
 /**
   ******************************************************************************
   * File Name          : sha256.c
-  * Description        : SHA-256 implementation
+  * Description        : This file includes the implementation of the functions
+  *                      for computing the SHA256 and HMAC-SHA256 algorithms.
   ******************************************************************************
   *
-  * Copyright © 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
@@ -21,13 +22,6 @@
   *
   ******************************************************************************
   */
-
-/**
- * @file B5_Sha256.c
- * @date 22/03/2016
- * @brief This file includes the implementation of the functions for computing the SHA256 and HMAC-SHA256 algorithms. See \ref B5_Sha256.h .
- *
- */
 
 #include "sha256.h"
 

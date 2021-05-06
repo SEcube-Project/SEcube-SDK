@@ -45,8 +45,8 @@
 
 /* USER CODE END Includes */
 
-extern NOR_HandleTypeDef hnor1;
-extern NOR_HandleTypeDef hnor2;
+extern SRAM_HandleTypeDef SRAM_READ;
+extern SRAM_HandleTypeDef SRAM_WRITE;
 
 /* USER CODE BEGIN Private defines */
 

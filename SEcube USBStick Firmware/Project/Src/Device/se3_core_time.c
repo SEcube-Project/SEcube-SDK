@@ -4,7 +4,7 @@
   * Description        : Firmware internal timer
   ******************************************************************************
   *
-  * Copyright � 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
@@ -28,11 +28,6 @@
  * They were used in the past but the code has been completely commented
  * because it is not required anymore. However, the code has been left
  * here since it may still be useful in the future. */
-
-/**
- *  \file se3_core_time.c
- *  \brief Core Timer
- */
 
 //#include "se3_core_time.h"
 //

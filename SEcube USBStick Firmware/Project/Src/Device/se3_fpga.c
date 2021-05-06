@@ -1,10 +1,12 @@
 /**
   ******************************************************************************
-  * File Name          : FPGA.c
-  * Description        : FPGA primitives
+  * File Name          : se3_fpga.c
+  * Description        : FPGA Primitives for programming and communicating
+  *                      with the device FPGA, both in bit banging/pin manual
+  *                      setting mode, and in FMC/memory mode
   ******************************************************************************
   *
-  * Copyright � 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
@@ -22,112 +24,16 @@
   ******************************************************************************
   */
 
+#include <se3_fpga.h>
+#include <se3_fpga_bitstream.h>
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx.h"
-#include "FPGA.h"
-#include "TEST_FPGA.h"
 
 
 
-uint32_t g_iAlgoSize = 129857;
-uint32_t g_iDataSize = 191421;
-
-
-// Lattice Cable Pins
-
-#define    pinTDI       1
-#define    pinTCK       2
-#define    pinTMS       4
-#define    pinENABLE    8
-#define    pinTRST      16
-#define    pinCE        32
-#define    pinTDO       64
-
-
-// Errors
-
-#define ERR_VERIFY0_FAIL			-1
-#define ERR_FIND_ALGO_FILE			-2
-#define ERR_FIND_DATA_FILE			-3
-#define ERR_WRONG_VERSION			-4
-#define ERR_ALGO_FILE_ERROR			-5
-#define ERR_DATA_FILE_ERROR			-6
-#define ERR_OUT_OF_MEMORY			-7
-
-
-
-
-// Registers Bit
-
-#define SIR_DATA		0x0001	/*** Current command is SIR ***/
-#define SDR_DATA		0x0002	/*** Current command is SDR ***/
-#define TDI_DATA		0x0004	/*** Command contains TDI ***/
-#define TDO_DATA		0x0008	/*** Command contains TDO ***/
-#define MASK_DATA		0x0010	/*** Command contains MASK ***/
-#define DTDI_DATA		0x0020	/*** Verification flow ***/
-#define DTDO_DATA		0x0040	/*** Verification flow ***/
-#define COMPRESS		0x0080	/*** Compressed data file ***/
-#define COMPRESS_FRAME	0x0100	/*** Compressed data frame ***/
-
-
-// JTAG States
-
-#define RESET      0x00
-#define IDLE       0x01
-#define IRPAUSE    0x02
-#define DRPAUSE    0x03
-#define SHIFTIR    0x04
-#define SHIFTDR    0x05
-#define DRCAPTURE  0x06
-
-
-
-
-// VME Opcodes
-
-#define STATE			0x10
-#define SIR				0x11
-#define SDR				0x12
-#define TCK				0x1B
-#define WAIT			0x1A
-#define ENDDR			0x02
-#define ENDIR			0x03
-#define HIR				0x06
-#define TIR				0x07
-#define HDR				0x08
-#define TDR		        0x09
-#define TDI				0x13
-#define CONTINUE		0x70
-#define TDO				0x14
-#define MASK			0x15
-#define LOOP			0x58
-#define ENDLOOP			0x59
-#define LCOUNT			0x66
-#define LDELAY			0x67
-#define LSDR			0x68
-#define ENDSTATE		0x69
-#define ENDVME			0x7F
-
-
-#define BEGIN_REPEAT	0xA0
-#define END_REPEAT		0xA1
-#define END_FRAME		0xA2
-#define DATA			0xA3
-#define PROGRAM			0xA4
-#define VERIFY0			0xA5
-#define DTDI			0xA6
-#define DTDO			0xA7
-
-
-
-#define signalENABLE	0x1C    /*assert the ispEN pin*/
-#define signalTMS		0x1D    /*assert the MODE or TMS pin*/
-#define signalTCK		0x1E    /*assert the SCLK or TCK pin*/
-#define signalTDI		0x1F    /*assert the SDI or TDI pin*/
-#define signalTRST		0x20    /*assert the RESET or TRST pin*/
-#define signalTDO		0x21    /*assert the RESET or TDO pin*/
-#define signalCableEN   0x22    /*assert the RESET or CableEN pin*/
+uint32_t g_iAlgoSize;
+uint32_t g_iDataSize;
 
 
 /*************************************************************
@@ -175,8 +81,6 @@ extern int16_t g_siIspPins;
 // External Functions
 
 extern void ispVMStateMachine( char a_cNextState );
-
-
 
 
 uint8_t readPort()
@@ -260,6 +164,10 @@ int16_t ispVMRead (uint32_t a_uiDataSize);
 void ispVMSend (uint32_t a_uiDataSize);
 void ispVMLCOUNT (uint16_t a_usCountSize);
 void ispVMLDELAY (void);
+
+// Overall FPGA programming function
+int32_t FPGA_Programming(void);
+
 /*************************************************************
 *                                                            *
 * EXTERNAL FUNCTION                                          *
@@ -1590,7 +1498,7 @@ char *g_szSupportedVersions[] = { (char *) "_SVME1.1", (char *) "_SVME1.2", (cha
 *                                                            *
 *************************************************************/
 
-int32_t B5_FPGA_Programming()
+int32_t FPGA_Programming()
 {
 	char szFileVersion[ 9 ] = { 0 };
 	int16_t siRetCode     = 0;
@@ -1701,13 +1609,67 @@ int32_t B5_FPGA_Programming()
 
 
 
-void B5_FPGA_SetMux (uint8_t mux)
+/*************************************************************
+*                                                            *
+* PUBLIC CALLS                                               *
+*                                                            *
+*************************************************************/
+
+
+int32_t se3_FPGA_Init (const uint32_t rcc_mcodiv)
+{
+	/* Set MCO1 output = PLLCLK with prescaler from 1 to 5 */
+	__HAL_RCC_MCO1_CONFIG(RCC_MCO1SOURCE_PLLCLK, rcc_mcodiv);
+
+	/* Configure interrupt line */
+
+	/* Set variables used */
+	EXTI_InitTypeDef EXTI_InitStruct;
+	NVIC_InitTypeDef NVIC_InitStruct;
+
+	/* Tell system that you will use PA9 for EXTI_Line9 */
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOA, EXTI_PinSource9);
+
+	/* PA9 is connected to EXTI_Line9 */
+	EXTI_InitStruct.EXTI_Line = EXTI_Line9;
+	/* Enable interrupt */
+	EXTI_InitStruct.EXTI_LineCmd = ENABLE;
+	/* Interrupt mode */
+	EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;
+	/* Triggers on rising edge */
+	EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising;
+	/* Add to EXTI */
+	EXTI_Init(&EXTI_InitStruct);
+
+	/* Add IRQ vector to NVIC */
+	/* PA9 is connected to EXTI_Line9, which has EXTI9_5_IRQn vector */
+	NVIC_InitStruct.NVIC_IRQChannel = EXTI9_5_IRQn;
+	/* Set priority */
+	NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x00;
+	/* Set sub priority */
+	NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x01;
+	/* Enable interrupt */
+	NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+	/* Add to NVIC */
+	NVIC_Init(&NVIC_InitStruct);
+
+
+	/* Program the FPGA according to the given bitstream */
+	int32_t retcode = FPGA_Programming();
+
+	return retcode;
+
+}
+
+
+
+void se3_FPGA_SetMux (uint8_t mux)
 {
 		//	CPU_FPGA_BUS_NE1	PD7	--  MUX0 -- LSB
 		//	CPU_FPGA_BUS_NE2	PG9	--  MUX1
-		//	CPU_FPGA_CLK			PA8	--  MUX2
-		//	CPU_FPGA_INTN			PA9	--  MUX3
-		//	CPU_FPGA_RST			PG2	--  MUX4 -- MSB
+		//	CPU_FPGA_CLK		PA8	--  MUX2
+		//	CPU_FPGA_INTN		PA9	--  MUX3
+		//	CPU_FPGA_RST		PG2	--  MUX4 -- MSB
 
 
 		if(mux & 0x01)
@@ -1739,34 +1701,8 @@ void B5_FPGA_SetMux (uint8_t mux)
 
 
 
-void B5_FPGA_FpgaCpuGPIO (uint8_t gpioNum, GPIO_PinState set)
+void se3_FPGA_FpgaCpuGPIO (uint8_t gpioNum, GPIO_PinState set)
 {
-
-	//	CPU_FPGA_BUS_D(0) 	PD14	0
-	//	CPU_FPGA_BUS_D(1) 	PD15	1
-	//	CPU_FPGA_BUS_D(2) 	PD0		2
-	//	CPU_FPGA_BUS_D(3) 	PD1		3
-	//	CPU_FPGA_BUS_D(4) 	PE7		4
-	//	CPU_FPGA_BUS_D(5) 	PE8		5
-	//	CPU_FPGA_BUS_D(6) 	PE9		6
-	//	CPU_FPGA_BUS_D(7) 	PE10	7
-	//	CPU_FPGA_BUS_D(8) 	PE11	8
-	//	CPU_FPGA_BUS_D(9) 	PE12	9
-	//	CPU_FPGA_BUS_D(10)  PE13	10
-	//	CPU_FPGA_BUS_D(11)	PE14	11
-	//	CPU_FPGA_BUS_D(12)	PE15	12
-	//	CPU_FPGA_BUS_D(13)	PD8		13
-	//	CPU_FPGA_BUS_D(14)	PD9		14
-	//	CPU_FPGA_BUS_D(15)	PD10	15
-	//	CPU_FPGA_BUS_A(0) 	PF0		16
-	//	CPU_FPGA_BUS_A(1) 	PF1		17
-	//	CPU_FPGA_BUS_A(2) 	PF2		18
-	//	CPU_FPGA_BUS_A(3) 	PF3		19
-	//	CPU_FPGA_BUS_A(4) 	PF4		20
-	//	CPU_FPGA_BUS_A(5) 	PF5		21
-	//	CPU_FPGA_BUS_NOE  	PD4		22
-	//	CPU_FPGA_BUS_NWE  	PD5		23
-
 
 	switch(gpioNum)
 	{
@@ -1872,3 +1808,53 @@ void B5_FPGA_FpgaCpuGPIO (uint8_t gpioNum, GPIO_PinState set)
 	}
 }
 
+
+void se3_FPGA_Reset () {
+
+	HAL_GPIO_WritePin(GPIOG, FPGA_RST_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOG, FPGA_RST_Pin, GPIO_PIN_RESET);
+
+}
+
+
+
+SRAM_HandleTypeDef SRAM_READ;
+SRAM_HandleTypeDef SRAM_WRITE;
+
+
+
+
+uint8_t se3_FPGA_Read (uint8_t address, uint16_t *dataPtr)
+{
+	HAL_StatusTypeDef status;
+	uint32_t addr = (FPGA_SRAM_BASE_ADDR + 2*address);
+	status = HAL_SRAM_Read_16b(&SRAM_READ, (uint32_t*)addr, dataPtr, 1);
+	return status == HAL_OK ? 0 : 1;
+}
+
+
+
+
+uint8_t se3_FPGA_Write (uint8_t address, uint16_t *dataPtr)
+{
+	HAL_StatusTypeDef status;
+	uint32_t addr = (FPGA_SRAM_BASE_ADDR + 2*address);
+	status = HAL_SRAM_Write_16b(&SRAM_WRITE, (uint32_t*)addr, dataPtr, 1);
+	return status == HAL_OK ? 0 : 1;
+}
+
+/*************************************************************
+*                                                            *
+* Define the interrupt handler for the FPGA (left to user).  *
+*                                                            *
+*************************************************************/
+
+void EXTI9_5_IRQHandler(void) {
+	/* Make sure that interrupt flag is set */
+    if (EXTI_GetITStatus(EXTI_Line9) != RESET) {
+        /* Do your stuff when PA9 is changed */
+
+        /* Clear interrupt flag */
+        EXTI_ClearITPendingBit(EXTI_Line9);
+    }
+}

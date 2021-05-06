@@ -1,10 +1,10 @@
 /**
   ******************************************************************************
-  * File Name          : se3_sdio.h
-  * Description        : SEcube MicroSD interface
+  * File Name          : se3_rand.c
+  * Description        : SEcube TRNG
   ******************************************************************************
   *
-  * Copyright © 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
@@ -22,19 +22,45 @@
   ******************************************************************************
   */
 
-#pragma once
-#include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include "se3_rand.h"
+#include "rng.h"
+#include "stm32f4xx_hal_rng.h"
 
-#define SD_DATATIMEOUT ((uint32_t)100000000)
-#define MEM_OP_FAIL (1)
-#define MEM_OP_OK (0)
-#define STORAGE_LUN_NBR (1)
-#define STORAGE_BLK_SIZ (512)
 
-bool secube_sdio_read(uint8_t lun, uint8_t* buf, uint32_t blk_addr, uint16_t blk_len);
-bool secube_sdio_write(uint8_t lun, const uint8_t* buf, uint32_t blk_addr, uint16_t blk_len);
-bool secube_sdio_capacity(uint32_t *block_num, uint16_t *block_size);
-bool secube_sdio_isready(void);
+bool se3_rand32(uint32_t *val){
+	size_t i;
+	HAL_StatusTypeDef ret;
+	for(i=0; i<20; i++){
+		ret=HAL_RNG_GenerateRandomNumber(&hrng, val);
+		if(ret==HAL_OK){
+			return true;
+		}
+		else if(ret==HAL_ERROR){
+			return false;
+		}
+	}
+	return false;
+}
 
+uint16_t se3_rand(uint16_t size, uint8_t* data){
+	uint32_t tmp;
+	size_t i,n;
+
+	n=size/4;
+	for(i=0;i<n;i++){
+		if(!se3_rand32((uint32_t*)data)){
+			return 0;
+		}
+		data+=4;
+	}
+	n=size%4;
+	if(n!=0){
+		if(!se3_rand32(&tmp)){
+			return 0;
+		}
+		for(i=0;i<n;i++){
+			data[i]=((uint8_t*)&tmp)[i];
+		}
+	}
+	return size;
+}

@@ -1,7 +1,8 @@
 /**
   ******************************************************************************
   * File Name          : main.c
-  * Description        : Main program body
+  * Version            : SEcube SDK 1.5.1
+  * Description        : Device inizialization and main loop.
   ******************************************************************************
   *
   * COPYRIGHT(c) 2016 STMicroelectronics
@@ -32,14 +33,6 @@
   */
 /* Includes ------------------------------------------------------------------*/
 
-/**
- *  \file main.c
- *  \date 10/02/2021
- *  \version SEcube SDK 1.5.1
- *  \brief Device inizialization and main loop.
- */
-
-
 #include "stm32f4xx_hal.h"
 #include "adc.h"
 #include "crc.h"
@@ -56,6 +49,7 @@
 #include "se3_sekey.h"
 /* USER CODE BEGIN Includes */
 #include "se3_core.h"
+#include "se3_fpga.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -63,7 +57,7 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
-//Add following tow lines when using Keil to flash the USBStick
+//Add following lines when using Keil to flash the USBStick
 //uint32_t 						vectorTable_RAM[256] __attribute__(( aligned (0x200ul) ));
 //extern uint32_t 		__Vectors[];                             /* vector table ROM  */
 /* USER CODE END PV */
@@ -85,8 +79,9 @@ int main(void)
 {
 
 	/* USER CODE BEGIN 1 */
-	// Init SEcube structures
-	//uint8_t a,b,c;
+
+	uint16_t val;
+	int i;
 
 	/* USER CODE END 1 */
 
@@ -126,8 +121,17 @@ int main(void)
 	MX_CRC_Init();
 	MX_RNG_Init();
 
+
 	/* USER CODE BEGIN */
+	se3_FPGA_Init(RCC_MCODIV_2);
 	device_init();
+
+	se3_FPGA_Reset();
+	for(i=0; i<50; i++) {
+		se3_FPGA_Write(0, &val);
+		HAL_Delay(1000);
+		val++;
+	}
 
 	device_loop();
 	/* USER CODE END  */

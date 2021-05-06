@@ -1,10 +1,10 @@
 /**
   ******************************************************************************
   * File Name          : se3_security_core.c
-  * Description        : Low level security functionalities
+  * Description        : Low-level security functionalities
   ******************************************************************************
   *
-  * Copyright � 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
@@ -21,11 +21,6 @@
   *
   ******************************************************************************
   */
-
-/**
- *  \file se3_security_core.c
- *  \brief Security core
- */
 
 #include "se3_security_core.h"
 #include "se3_flash.h"

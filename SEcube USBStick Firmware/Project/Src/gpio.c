@@ -56,73 +56,80 @@
 void MX_GPIO_Init(void)
 {
 
-  GPIO_InitTypeDef GPIO_InitStruct;
+	GPIO_InitTypeDef GPIO_InitStruct;
 
-  /* GPIO Ports Clock Enable */
-  __GPIOE_CLK_ENABLE();
-  __GPIOB_CLK_ENABLE();
-  __GPIOD_CLK_ENABLE();
-  __GPIOC_CLK_ENABLE();
-  __GPIOA_CLK_ENABLE();
-  __GPIOF_CLK_ENABLE();
-  __GPIOG_CLK_ENABLE();
-  __GPIOI_CLK_ENABLE();
-  __GPIOH_CLK_ENABLE();
+	/* GPIO Ports Clock Enable */
+	__GPIOE_CLK_ENABLE();
+	__GPIOB_CLK_ENABLE();
+	__GPIOD_CLK_ENABLE();
+	__GPIOC_CLK_ENABLE();
+	__GPIOA_CLK_ENABLE();
+	__GPIOF_CLK_ENABLE();
+	__GPIOG_CLK_ENABLE();
+	__GPIOI_CLK_ENABLE();
+	__GPIOH_CLK_ENABLE();
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, FPGA_TCK_Pin|FPGA_TDO_Pin|SC_ON_OFF_Pin|SC_RST_Pin 
-                          |FPGA_TMS_Pin|FPGA_PROGRAMN_Pin, GPIO_PIN_RESET);
+	/*Configure GPIO pin Output Level */
+	HAL_GPIO_WritePin(GPIOE, FPGA_TCK_Pin|FPGA_TDO_Pin|SC_ON_OFF_Pin|SC_RST_Pin
+			|FPGA_TMS_Pin|FPGA_PROGRAMN_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOG, GPIO0_RST_OUT_Pin|FPGA_RST_Pin, GPIO_PIN_RESET);
+	/*Configure GPIO pin Output Level */
+	HAL_GPIO_WritePin(GPIOG, GPIO0_RST_OUT_Pin|FPGA_RST_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PE0 PE1 */
-  GPIO_InitStruct.Pin = SC_ON_OFF_Pin|SC_RST_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+	/*Configure GPIO pins : PE0 PE1 */
+	GPIO_InitStruct.Pin = SC_ON_OFF_Pin|SC_RST_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+	HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PE3 PE5 PE4 PE6 */
-  GPIO_InitStruct.Pin = FPGA_TCK_Pin|FPGA_TDI_Pin|FPGA_TMS_Pin|FPGA_PROGRAMN_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+	/*Configure GPIO pins : JTAG outputs to FPGA : PE3 PE5 PE4 PE6 */
+	GPIO_InitStruct.Pin = FPGA_TCK_Pin|FPGA_TDI_Pin|FPGA_TMS_Pin|FPGA_PROGRAMN_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+	HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PE2 */
-  GPIO_InitStruct.Pin = FPGA_TDO_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(FPGA_TDI_GPIO_Port, &GPIO_InitStruct);
+	/*Configure GPIO pin : JTAG input from FPGA : PE2 */
+	GPIO_InitStruct.Pin = FPGA_TDO_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(FPGA_TDI_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA9 */
-  GPIO_InitStruct.Pin = FPGA_INTN_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(FPGA_INTN_GPIO_Port, &GPIO_InitStruct);
+	/* Set pin PG2 as reset for the FPGA */
+	GPIO_InitStruct.Pin = FPGA_RST_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+	HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA8 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF0_MCO;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	/* Set pin PA8 as clock for the FPGA */
+	GPIO_InitStruct.Pin = GPIO_PIN_8;
+	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+	GPIO_InitStruct.Alternate = GPIO_AF0_MCO;
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PF10 */
-  GPIO_InitStruct.Pin = GPIO1_INT_N_OUT_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIO1_INT_N_OUT_GPIO_Port, &GPIO_InitStruct);
+	/* Set pin PA9 as interrupt line from the FPGA */
+	GPIO_InitStruct.Pin = FPGA_INTN_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+	HAL_GPIO_Init(FPGA_INTN_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PG3 PG2 */
-  GPIO_InitStruct.Pin = GPIO0_RST_OUT_Pin|FPGA_RST_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
-  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+	/*Configure GPIO pin : PF10 : CPU_GP1 */
+	GPIO_InitStruct.Pin = GPIO1_INT_N_OUT_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	HAL_GPIO_Init(GPIO1_INT_N_OUT_GPIO_Port, &GPIO_InitStruct);
 
+	/*Configure GPIO pins : PG3 : CPU_GP0 */
+	GPIO_InitStruct.Pin = GPIO0_RST_OUT_Pin;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+	HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
 
 }

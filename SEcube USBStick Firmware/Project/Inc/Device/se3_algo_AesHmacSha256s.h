@@ -1,10 +1,10 @@
 /**
   ******************************************************************************
   * File Name          : se3_algo_AesHmacSha256s.h
-  * Description        : AES-HMAC-SHA-256 primitives
+  * Description        : AES-HMAC-SHA-256 primitives/crypto handlers
   ******************************************************************************
   *
-  * Copyright � 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public

@@ -1,10 +1,11 @@
 /**
   ******************************************************************************
   * File Name          : crc16.h
-  * Description        : CRC16 implementation
+  * Description        : This file contains defines and functions for
+  *                      computing CRC
   ******************************************************************************
   *
-  * Copyright © 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
@@ -21,11 +22,6 @@
   *
   ******************************************************************************
   */
-
-/**
- *  \file crc16.h
- *  \brief This file contains defines and functions for computing CRC
- */
 
 #pragma once
 

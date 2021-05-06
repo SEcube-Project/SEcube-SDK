@@ -1,10 +1,10 @@
 /**
   ******************************************************************************
   * File Name          : se3_sekey.h
-  * Description        : Firmware-side SEkey functionalities
+  * Description        : Firmware functionalities to support the KMS
   ******************************************************************************
   *
-  * Copyright � 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
@@ -21,13 +21,6 @@
   *
   ******************************************************************************
   */
-
-/**
- *  \file se3_sekey.h
- *  \date 22/06/2020
- *  \version SEcube SDK 1.5.1
- *  \brief Firmware functionalities to support the KMS.
- */
 
 #ifndef SE3_SEKEY_H
 #define SE3_SEKEY_H

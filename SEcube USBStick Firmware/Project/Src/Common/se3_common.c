@@ -1,10 +1,11 @@
 /**
   ******************************************************************************
   * File Name          : se3_common.c
-  * Description        : Common functions and data structures
+  * Description        : Common functions and data structures.
+  *                      Debug tools are also here
   ******************************************************************************
   *
-  * Copyright � 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
@@ -21,11 +22,6 @@
   *
   ******************************************************************************
   */
-
-/**
- *  \file se3_common.c
- *  \brief Common functions and data structures. Debug tools are also here
- */
 
 #include "se3_common.h"
 #include "se3_sdio.h"

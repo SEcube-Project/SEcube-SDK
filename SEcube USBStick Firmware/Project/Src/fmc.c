@@ -40,169 +40,158 @@
 
 /* USER CODE END 0 */
 
-NOR_HandleTypeDef hnor1;
-NOR_HandleTypeDef hnor2;
+SRAM_HandleTypeDef SRAM_READ;
+SRAM_HandleTypeDef SRAM_WRITE;
 
 /* FMC initialization function */
 void MX_FMC_Init(void)
 {
-  FMC_NORSRAM_TimingTypeDef Timing;
+	FMC_NORSRAM_TimingTypeDef Timing;
+	FMC_NORSRAM_TimingTypeDef ExtTiming;
 
-  /** Perform the NOR1 memory initialization sequence
-  */
-  hnor1.Instance = FMC_NORSRAM_DEVICE;
-  hnor1.Extended = FMC_NORSRAM_EXTENDED_DEVICE;
-  /* hnor1.Init */
-  hnor1.Init.NSBank = FMC_NORSRAM_BANK1;
-  hnor1.Init.DataAddressMux = FMC_DATA_ADDRESS_MUX_DISABLE;
-  hnor1.Init.MemoryType = FMC_MEMORY_TYPE_NOR;
-  hnor1.Init.MemoryDataWidth = FMC_NORSRAM_MEM_BUS_WIDTH_16;
-  hnor1.Init.BurstAccessMode = FMC_BURST_ACCESS_MODE_DISABLE;
-  hnor1.Init.WaitSignalPolarity = FMC_WAIT_SIGNAL_POLARITY_LOW;
-  hnor1.Init.WrapMode = FMC_WRAP_MODE_DISABLE;
-  hnor1.Init.WaitSignalActive = FMC_WAIT_TIMING_BEFORE_WS;
-  hnor1.Init.WriteOperation = FMC_WRITE_OPERATION_DISABLE;
-  hnor1.Init.WaitSignal = FMC_WAIT_SIGNAL_DISABLE;
-  hnor1.Init.ExtendedMode = FMC_EXTENDED_MODE_DISABLE;
-  hnor1.Init.AsynchronousWait = FMC_ASYNCHRONOUS_WAIT_DISABLE;
-  hnor1.Init.WriteBurst = FMC_WRITE_BURST_DISABLE;
-  hnor1.Init.ContinuousClock = FMC_CONTINUOUS_CLOCK_SYNC_ONLY;
-  hnor1.Init.PageSize = FMC_PAGE_SIZE_NONE;
-  /* Timing */
-  Timing.AddressSetupTime = 15;
-  Timing.AddressHoldTime = 15;
-  Timing.DataSetupTime = 255;
-  Timing.BusTurnAroundDuration = 15;
-  Timing.CLKDivision = 16;
-  Timing.DataLatency = 17;
-  Timing.AccessMode = FMC_ACCESS_MODE_A;
-  /* ExtTiming */
+	/** Perform the FPGA memory read initialization sequence */
+	SRAM_READ.Instance = FMC_NORSRAM_DEVICE;
+	SRAM_READ.Extended = FMC_NORSRAM_EXTENDED_DEVICE;
 
-  HAL_NOR_Init(&hnor1, &Timing, NULL);
+	/* SRAM_READ.Init */
+	SRAM_READ.Init.NSBank = FMC_NORSRAM_BANK1;
+	SRAM_READ.Init.DataAddressMux = FMC_DATA_ADDRESS_MUX_DISABLE;
+	SRAM_READ.Init.MemoryType = FMC_MEMORY_TYPE_SRAM;
+	SRAM_READ.Init.MemoryDataWidth = FMC_NORSRAM_MEM_BUS_WIDTH_16;
+	SRAM_READ.Init.BurstAccessMode = FMC_BURST_ACCESS_MODE_DISABLE;
+	SRAM_READ.Init.WaitSignalPolarity = FMC_WAIT_SIGNAL_POLARITY_LOW;
+	SRAM_READ.Init.WrapMode = FMC_WRAP_MODE_DISABLE;
+	SRAM_READ.Init.WaitSignalActive = FMC_WAIT_TIMING_BEFORE_WS;
+	SRAM_READ.Init.WriteOperation = FMC_WRITE_OPERATION_ENABLE;
+	SRAM_READ.Init.WaitSignal = FMC_WAIT_SIGNAL_DISABLE;
+	SRAM_READ.Init.ExtendedMode = FMC_EXTENDED_MODE_ENABLE;
+	SRAM_READ.Init.AsynchronousWait = FMC_ASYNCHRONOUS_WAIT_DISABLE;
+	SRAM_READ.Init.WriteBurst = FMC_WRITE_BURST_DISABLE;
+	SRAM_READ.Init.ContinuousClock = FMC_CONTINUOUS_CLOCK_SYNC_ONLY;
 
-  /** Perform the NOR2 memory initialization sequence
-  */
-  hnor2.Instance = FMC_NORSRAM_DEVICE;
-  hnor2.Extended = FMC_NORSRAM_EXTENDED_DEVICE;
-  /* hnor2.Init */
-  hnor2.Init.NSBank = FMC_NORSRAM_BANK2;
-  hnor2.Init.DataAddressMux = FMC_DATA_ADDRESS_MUX_DISABLE;
-  hnor2.Init.MemoryType = FMC_MEMORY_TYPE_NOR;
-  hnor2.Init.MemoryDataWidth = FMC_NORSRAM_MEM_BUS_WIDTH_16;
-  hnor2.Init.BurstAccessMode = FMC_BURST_ACCESS_MODE_DISABLE;
-  hnor2.Init.WaitSignalPolarity = FMC_WAIT_SIGNAL_POLARITY_LOW;
-  hnor2.Init.WrapMode = FMC_WRAP_MODE_DISABLE;
-  hnor2.Init.WaitSignalActive = FMC_WAIT_TIMING_BEFORE_WS;
-  hnor2.Init.WriteOperation = FMC_WRITE_OPERATION_DISABLE;
-  hnor2.Init.WaitSignal = FMC_WAIT_SIGNAL_DISABLE;
-  hnor2.Init.ExtendedMode = FMC_EXTENDED_MODE_DISABLE;
-  hnor2.Init.AsynchronousWait = FMC_ASYNCHRONOUS_WAIT_DISABLE;
-  hnor2.Init.WriteBurst = FMC_WRITE_BURST_DISABLE;
-  hnor2.Init.ContinuousClock = FMC_CONTINUOUS_CLOCK_SYNC_ONLY;
-  hnor2.Init.PageSize = FMC_PAGE_SIZE_NONE;
-  /* Timing */
-  Timing.AddressSetupTime = 15;
-  Timing.AddressHoldTime = 15;
-  Timing.DataSetupTime = 255;
-  Timing.BusTurnAroundDuration = 15;
-  Timing.CLKDivision = 16;
-  Timing.DataLatency = 17;
-  Timing.AccessMode = FMC_ACCESS_MODE_A;
-  /* ExtTiming */
+	// Timing (Read)
+	Timing.AccessMode = FMC_ACCESS_MODE_A;
+	Timing.AddressSetupTime = 4;
+	Timing.AddressHoldTime = 0;
+	Timing.DataSetupTime = 4;
+	Timing.BusTurnAroundDuration = 0; // don't care
+	Timing.CLKDivision = 10; // don't care
+	Timing.DataLatency = 2; // don't care
 
-  HAL_NOR_Init(&hnor2, &Timing, NULL);
+	/** Perform the FPGA memory write initialization sequence */
+	SRAM_WRITE.Instance = FMC_NORSRAM_DEVICE;
+	SRAM_WRITE.Extended = FMC_NORSRAM_EXTENDED_DEVICE;
+
+	/* SRAM_WRITE.Init */
+	SRAM_WRITE.Init.NSBank = FMC_NORSRAM_BANK2;
+	SRAM_WRITE.Init.DataAddressMux = FMC_DATA_ADDRESS_MUX_DISABLE;
+	SRAM_WRITE.Init.MemoryType = FMC_MEMORY_TYPE_SRAM;
+	SRAM_WRITE.Init.MemoryDataWidth = FMC_NORSRAM_MEM_BUS_WIDTH_16;
+	SRAM_WRITE.Init.BurstAccessMode = FMC_BURST_ACCESS_MODE_DISABLE;
+	SRAM_WRITE.Init.WaitSignalPolarity = FMC_WAIT_SIGNAL_POLARITY_LOW;
+	SRAM_WRITE.Init.WrapMode = FMC_WRAP_MODE_DISABLE;
+	SRAM_WRITE.Init.WaitSignalActive = FMC_WAIT_TIMING_BEFORE_WS;
+	SRAM_WRITE.Init.WriteOperation = FMC_WRITE_OPERATION_DISABLE;
+	SRAM_WRITE.Init.WaitSignal = FMC_WAIT_SIGNAL_DISABLE;
+	SRAM_WRITE.Init.ExtendedMode = FMC_EXTENDED_MODE_ENABLE;
+	SRAM_WRITE.Init.AsynchronousWait = FMC_ASYNCHRONOUS_WAIT_DISABLE;
+	SRAM_WRITE.Init.WriteBurst = FMC_WRITE_BURST_DISABLE;
+	SRAM_WRITE.Init.ContinuousClock = FMC_CONTINUOUS_CLOCK_SYNC_ONLY;
+
+	// ExtTiming (Write)
+	ExtTiming.AccessMode = FMC_ACCESS_MODE_A;
+	ExtTiming.AddressSetupTime = 4;
+	ExtTiming.AddressHoldTime = 0;
+	ExtTiming.DataSetupTime = 4;
+	ExtTiming.BusTurnAroundDuration = 0; // don't care
+	ExtTiming.CLKDivision = 10; // don't care
+	ExtTiming.DataLatency = 2; // don't care
+
+	/* Send settings to FMC peripheral */
+	HAL_SRAM_Init(&SRAM_READ, &Timing, &ExtTiming);
+	HAL_SRAM_Init(&SRAM_WRITE, &Timing, &ExtTiming);
 
 }
+
 
 static int FMC_Initialized = 0;
 
-static void HAL_FMC_MspInit(void){
-  /* USER CODE BEGIN FMC_MspInit 0 */
 
-  /* USER CODE END FMC_MspInit 0 */
-  GPIO_InitTypeDef GPIO_InitStruct;
-  if (FMC_Initialized) {
-    return;
-  }
-  FMC_Initialized = 1;
-  /* Peripheral clock enable */
-  __FMC_CLK_ENABLE();
+static void HAL_FMC_MspInit(void) {
+	/* USER CODE BEGIN FMC_MspInit 0 */
+
+	/* USER CODE END FMC_MspInit 0 */
+	GPIO_InitTypeDef GPIO_InitStruct;
+
+	if (FMC_Initialized) {
+		return;
+	}
+	FMC_Initialized = 1;
+
+	/* Peripheral clock enable */
+	__FMC_CLK_ENABLE();
   
-  /** FMC GPIO Configuration  
-  PD7   ------> FMC_NE1
-  PD0   ------> FMC_D2
-  PD5   ------> FMC_NWE
-  PD1   ------> FMC_D3
-  PF0   ------> FMC_A0
-  PG9   ------> FMC_NE2
-  PD4   ------> FMC_NOE
-  PF1   ------> FMC_A1
-  PF2   ------> FMC_A2
-  PF3   ------> FMC_A3
-  PF4   ------> FMC_A4
-  PF5   ------> FMC_A5
-  PD15   ------> FMC_D1
-  PD10   ------> FMC_D15
-  PD14   ------> FMC_D0
-  PD9   ------> FMC_D14
-  PD8   ------> FMC_D13
-  PE8   ------> FMC_D5
-  PE9   ------> FMC_D6
-  PE11   ------> FMC_D8
-  PE14   ------> FMC_D11
-  PE7   ------> FMC_D4
-  PE10   ------> FMC_D7
-  PE12   ------> FMC_D9
-  PE15   ------> FMC_D12
-  PE13   ------> FMC_D10
-  */
-  /* GPIO_InitStruct */
-  GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_0|GPIO_PIN_5|GPIO_PIN_1 
-                          |GPIO_PIN_4|GPIO_PIN_15|GPIO_PIN_10|GPIO_PIN_14 
-                          |GPIO_PIN_9|GPIO_PIN_8;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+	/** FMC GPIO Configuration
+	PF0   ------> FMC_A0
+	PF1   ------> FMC_A1
+	PF2   ------> FMC_A2
+	PF3   ------> FMC_A3
+	PF4   ------> FMC_A4
+	PF5   ------> FMC_A5
+	PE7   ------> FMC_D4
+	PE8   ------> FMC_D5
+	PE9   ------> FMC_D6
+	PE10   ------> FMC_D7
+	PE11   ------> FMC_D8
+	PE12   ------> FMC_D9
+	PE13   ------> FMC_D10
+	PE14   ------> FMC_D11
+	PE15   ------> FMC_D12
+	PD8   ------> FMC_D13
+	PD9   ------> FMC_D14
+	PD10   ------> FMC_D15
+	PD14   ------> FMC_D0
+	PD15   ------> FMC_D1
+	PD0   ------> FMC_D2
+	PD1   ------> FMC_D3
+	PD4   ------> FMC_NOE
+	PD5   ------> FMC_NWE
+	PD7   ------> FMC_NE1
+	PG9   ------> FMC_NE2
+	*/
 
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+	/* USER CODE BEGIN FMC_MspInit 1 */
+	GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5;
+	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+	GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+	HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /* GPIO_InitStruct */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3 
-                          |GPIO_PIN_4|GPIO_PIN_5;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+	GPIO_InitStruct.Pin = GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
+	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+	GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+	HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+	GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_14 | GPIO_PIN_15 | GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_7;
+	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+	GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /* GPIO_InitStruct */
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
-
-  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
-
-  /* GPIO_InitStruct */
-  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_11|GPIO_PIN_14 
-                          |GPIO_PIN_7|GPIO_PIN_10|GPIO_PIN_12|GPIO_PIN_15 
-                          |GPIO_PIN_13;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
-
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-  /* USER CODE BEGIN FMC_MspInit 1 */
-
-  /* USER CODE END FMC_MspInit 1 */
+	GPIO_InitStruct.Pin = GPIO_PIN_9;
+	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+	GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
+	HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+	/* USER CODE END FMC_MspInit 1 */
 }
 
-void HAL_NOR_MspInit(NOR_HandleTypeDef* hnor){
+void HAL_SRAM_MspInit(SRAM_HandleTypeDef* hsram) {
   /* USER CODE BEGIN NOR_MspInit 0 */
 
   /* USER CODE END NOR_MspInit 0 */
@@ -212,7 +201,10 @@ void HAL_NOR_MspInit(NOR_HandleTypeDef* hnor){
   /* USER CODE END NOR_MspInit 1 */
 }
 
+
 static int FMC_DeInitialized = 0;
+
+
 
 static void HAL_FMC_MspDeInit(void){
   /* USER CODE BEGIN FMC_MspDeInit 0 */
@@ -225,34 +217,34 @@ static void HAL_FMC_MspDeInit(void){
   /* Peripheral clock enable */
   __FMC_CLK_DISABLE();
   
-  /** FMC GPIO Configuration  
-  PD7   ------> FMC_NE1
-  PD0   ------> FMC_D2
-  PD5   ------> FMC_NWE
-  PD1   ------> FMC_D3
-  PF0   ------> FMC_A0
-  PG9   ------> FMC_NE2
-  PD4   ------> FMC_NOE
-  PF1   ------> FMC_A1
-  PF2   ------> FMC_A2
-  PF3   ------> FMC_A3
-  PF4   ------> FMC_A4
-  PF5   ------> FMC_A5
-  PD15   ------> FMC_D1
-  PD10   ------> FMC_D15
-  PD14   ------> FMC_D0
-  PD9   ------> FMC_D14
-  PD8   ------> FMC_D13
-  PE8   ------> FMC_D5
-  PE9   ------> FMC_D6
-  PE11   ------> FMC_D8
-  PE14   ------> FMC_D11
-  PE7   ------> FMC_D4
-  PE10   ------> FMC_D7
-  PE12   ------> FMC_D9
-  PE15   ------> FMC_D12
-  PE13   ------> FMC_D10
-  */
+	/** FMC GPIO Configuration
+	PF0   ------> FMC_A0
+	PF1   ------> FMC_A1
+	PF2   ------> FMC_A2
+	PF3   ------> FMC_A3
+	PF4   ------> FMC_A4
+	PF5   ------> FMC_A5
+	PE7   ------> FMC_D4
+	PE8   ------> FMC_D5
+	PE9   ------> FMC_D6
+	PE10   ------> FMC_D7
+	PE11   ------> FMC_D8
+	PE12   ------> FMC_D9
+	PE13   ------> FMC_D10
+	PE14   ------> FMC_D11
+	PE15   ------> FMC_D12
+	PD8   ------> FMC_D13
+	PD9   ------> FMC_D14
+	PD10   ------> FMC_D15
+	PD14   ------> FMC_D0
+	PD15   ------> FMC_D1
+	PD0   ------> FMC_D2
+	PD1   ------> FMC_D3
+	PD4   ------> FMC_NOE
+	PD5   ------> FMC_NWE
+	PD7   ------> FMC_NE1
+	PG9   ------> FMC_NE2
+	*/
 
   HAL_GPIO_DeInit(GPIOD, GPIO_PIN_7|GPIO_PIN_0|GPIO_PIN_5|GPIO_PIN_1 
                           |GPIO_PIN_4|GPIO_PIN_15|GPIO_PIN_10|GPIO_PIN_14 
@@ -272,7 +264,7 @@ static void HAL_FMC_MspDeInit(void){
   /* USER CODE END FMC_MspDeInit 1 */
 }
 
-void HAL_NOR_MspDeInit(NOR_HandleTypeDef* hnor){
+void HAL_SRAM_MspDeInit(SRAM_HandleTypeDef* hsram) {
   /* USER CODE BEGIN NOR_MspDeInit 0 */
 
   /* USER CODE END NOR_MspDeInit 0 */

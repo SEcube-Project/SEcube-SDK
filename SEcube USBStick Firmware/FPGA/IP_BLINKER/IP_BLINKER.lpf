@@ -1,0 +1,68 @@
+##  ******************************************************************************
+##  * File Name          : IP_BLINKER.lpf
+##  * Description        : LPF configuration file for pin mapping and clock 
+##  *                      settings of the FPGA design onto the Lattice
+##  *                      MachX02 device
+##  ******************************************************************************
+##  *
+##  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
+##  *
+##  * This library is free software; you can redistribute it and/or
+##  * modify it under the terms of the GNU Lesser General Public
+##  * License as published by the Free Software Foundation; either
+##  * version 3 of the License, or (at your option) any later version.
+##  *
+##  * This library is distributed in the hope that it will be useful,
+##  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+##  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+##  * Lesser General Public License for more details.
+##  *
+##  * You should have received a copy of the GNU Lesser General Public
+##  * License along with this library; if not, see <https://www.gnu.org/licenses/>.
+##  *
+##  ******************************************************************************
+
+BLOCK RESETPATHS ;
+BLOCK ASYNCPATHS ;
+FREQUENCY 90.000000 MHz;
+IOBUF ALLPORTS IO_TYPE=LVCMOS33;
+
+LOCATE COMP "cpu_fpga_clk" SITE "PB16A";
+LOCATE COMP "cpu_fpga_bus_noe" SITE "PT28A";
+LOCATE COMP "cpu_fpga_bus_nwe" SITE "PT28B";
+LOCATE COMP "cpu_fpga_rst" SITE "PT25B";
+LOCATE COMP "cpu_fpga_int_n" SITE "PT35B";
+LOCATE COMP "cpu_fpga_bus_ne1" SITE "PT33B";
+
+LOCATE COMP "cpu_fpga_bus_a[0]" SITE "PB31A";
+LOCATE COMP "cpu_fpga_bus_a[1]" SITE "PB31B";
+LOCATE COMP "cpu_fpga_bus_a[2]" SITE "PB31D";
+LOCATE COMP "cpu_fpga_bus_a[3]" SITE "PB35A";
+LOCATE COMP "cpu_fpga_bus_a[4]" SITE "PB35B";
+LOCATE COMP "cpu_fpga_bus_a[5]" SITE "PB37A";
+
+LOCATE COMP "cpu_fpga_bus_d[0]" SITE "PB4A";
+LOCATE COMP "cpu_fpga_bus_d[1]" SITE "PB4B";
+LOCATE COMP "cpu_fpga_bus_d[2]" SITE "PB6A";
+LOCATE COMP "cpu_fpga_bus_d[3]" SITE "PB6B";
+LOCATE COMP "cpu_fpga_bus_d[4]" SITE "PB9A";
+LOCATE COMP "cpu_fpga_bus_d[5]" SITE "PB9B";
+LOCATE COMP "cpu_fpga_bus_d[6]" SITE "PB13A";
+LOCATE COMP "cpu_fpga_bus_d[7]" SITE "PB13B";
+LOCATE COMP "cpu_fpga_bus_d[8]" SITE "PB18A";
+LOCATE COMP "cpu_fpga_bus_d[9]" SITE "PB18B";
+LOCATE COMP "cpu_fpga_bus_d[10]" SITE "PB23A";
+LOCATE COMP "cpu_fpga_bus_d[11]" SITE "PB23B";
+LOCATE COMP "cpu_fpga_bus_d[12]" SITE "PB26A";
+LOCATE COMP "cpu_fpga_bus_d[13]" SITE "PB26B";
+LOCATE COMP "cpu_fpga_bus_d[14]" SITE "PB29A";
+LOCATE COMP "cpu_fpga_bus_d[15]" SITE "PB29B";
+
+LOCATE COMP "fpga_io_gp[0]" SITE "PR16C";
+LOCATE COMP "fpga_io_gp[1]" SITE "PR16D";
+LOCATE COMP "fpga_io_gp[2]" SITE "PR17C";
+LOCATE COMP "fpga_io_gp[3]" SITE "PR17D";
+LOCATE COMP "fpga_io_gp[4]" SITE "PR18C";
+LOCATE COMP "fpga_io_gp[5]" SITE "PR18D";
+LOCATE COMP "fpga_io_gp[6]" SITE "PR19A";
+LOCATE COMP "fpga_io_gp[7]" SITE "PR19B";

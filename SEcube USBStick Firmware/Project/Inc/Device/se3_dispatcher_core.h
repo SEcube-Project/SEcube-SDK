@@ -4,7 +4,7 @@
   * Description        : Firmware command dispatcher
   ******************************************************************************
   *
-  * Copyright � 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
@@ -21,11 +21,6 @@
   *
   ******************************************************************************
   */
-
-/**
- *  \file se3_dispatcher_core.h
- *  \brief Dispatcher core
- */
 
 #ifndef SE3_DISPATCHER_CORE_H
 #define SE3_DISPATCHER_CORE_H

@@ -2,9 +2,10 @@
   ******************************************************************************
   * File Name          : se3c1def.h
   * Description        : L1 constants
+  *                      This file contains defs to be used in all the modules
   ******************************************************************************
   *
-  * Copyright © 2016-present Blu5 Group <https://www.blu5group.com>
+  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
   *
   * This library is free software; you can redistribute it and/or
   * modify it under the terms of the GNU Lesser General Public
@@ -22,10 +23,6 @@
   ******************************************************************************
   */
 
-/**
- *  \file se3c1def.h
- *  \brief This file contains defines to be used in all the modules
- */
 #pragma once
 
 #include "se3c0def.h"
