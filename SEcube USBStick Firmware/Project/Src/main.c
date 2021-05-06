@@ -49,7 +49,6 @@
 #include "se3_sekey.h"
 /* USER CODE BEGIN Includes */
 #include "se3_core.h"
-#include "se3_fpga.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -79,9 +78,6 @@ int main(void)
 {
 
 	/* USER CODE BEGIN 1 */
-
-	uint16_t val;
-	int i;
 
 	/* USER CODE END 1 */
 
@@ -123,15 +119,7 @@ int main(void)
 
 
 	/* USER CODE BEGIN */
-	se3_FPGA_Init(RCC_MCODIV_2);
 	device_init();
-
-	se3_FPGA_Reset();
-	for(i=0; i<50; i++) {
-		se3_FPGA_Write(0, &val);
-		HAL_Delay(1000);
-		val++;
-	}
 
 	device_loop();
 	/* USER CODE END  */

@@ -1849,7 +1849,7 @@ uint8_t se3_FPGA_Write (uint8_t address, uint16_t *dataPtr)
 *                                                            *
 *************************************************************/
 
-void EXTI9_5_IRQHandler(void) {
+__weak void EXTI9_5_IRQHandler(void) {
 	/* Make sure that interrupt flag is set */
     if (EXTI_GetITStatus(EXTI_Line9) != RESET) {
         /* Do your stuff when PA9 is changed */
