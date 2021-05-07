@@ -486,7 +486,6 @@ void L1::L1Digest(size_t input_size, std::shared_ptr<uint8_t[]> input_data, SEcu
 				L1CryptoUpdate(encSessId, L1Crypto::UpdateFlags::FINIT, curr_chunk, input, 0, nullptr, &curr_len, output);
 			}
 			input_size -= curr_chunk;
-			output += curr_chunk;
 			input += curr_chunk;
 			curr_chunk = input_size < (L1Crypto::UpdateSize::DATAIN - B5_SHA256_DIGEST_SIZE) ? input_size : (L1Crypto::UpdateSize::DATAIN - B5_SHA256_DIGEST_SIZE);
 		} while(input_size > 0);
