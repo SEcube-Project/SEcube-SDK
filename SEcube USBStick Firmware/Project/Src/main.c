@@ -56,6 +56,7 @@
 #include "se3_sekey.h"
 /* USER CODE BEGIN Includes */
 #include "se3_core.h"
+#include "fatfs.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -125,9 +126,27 @@ int main(void)
 	MX_USB_DEVICE_Init();
 	MX_CRC_Init();
 	MX_RNG_Init();
+	MX_FATFS_Init();
 
 	/* USER CODE BEGIN */
 	device_init();
+
+	volatile FRESULT res;
+	FATFS fs;
+
+	res = f_mount (&fs, "", 0);
+
+	//res = f_mkfs("", 0, 0);
+
+
+	FIL fp;
+	res = f_open(&fp, "prova1.txt", FA_CREATE_NEW | FA_WRITE);
+	UINT bw;
+
+	char buff[5] = "eja";
+
+	f_write(&fp, (void *) buff, 4, &bw);
+	f_close(&fp);
 
 	device_loop();
 	/* USER CODE END  */
