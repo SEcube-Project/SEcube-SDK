@@ -13,7 +13,7 @@ typedef struct
 } SE3_FIL;
 
 
-#define MAX_PATHNAME 257
+#define MAX_PATHNAME 512
 
 //Copia e incolla da fatfs, da estendere con errori relativi alla parte crittografica
 typedef enum {

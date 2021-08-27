@@ -141,12 +141,12 @@ int main(void)
 
 
 	SE3_FIL fp;
-	res = secure_open(&fp, "prova1.txt", FA_CREATE_ALWAYS | FA_WRITE, 0, 0, 0);
+	res = secure_open(&fp, "prova2.txt", FA_CREATE_ALWAYS | FA_WRITE, 0, 0, 0);
 	UINT bw;
 
-	char buff[5] = "eja";
+	char buff[5] = "eja2";
 
-	secure_write(&fp, (void *) buff, 4);
+	secure_write(&fp, (void *) buff, 5);
 	secure_close(&fp);
 
 	device_loop();

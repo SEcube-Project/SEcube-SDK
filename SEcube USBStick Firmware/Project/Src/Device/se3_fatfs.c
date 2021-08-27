@@ -2,7 +2,7 @@
 
 static bool find_and_read_key(uint32_t keyID, se3_flash_key* key);
 static SE3_FRESULT crypto_filename(char *path, char *enc_name, uint16_t *encoded_length);
-static void get_filename(char *path, char *file_name);
+static void get_filename(char *path, char *file_name, int maxLength);
 static void get_path(char *full_path, char *path);
 
 
@@ -29,7 +29,7 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, int32_t mode, int32_t creati
 
 SE3_FRESULT secure_read(SE3_FIL* fp, uint8_t *dataOut, uint32_t dataOut_len, uint32_t *bytesRead)
 {
-	return f_read(&(fp->fp), dataOut, dataOut_len, bytesRead);
+	return f_read(&(fp->fp), dataOut, dataOut_len, (uint*) bytesRead);
 }
 
 SE3_FRESULT secure_write(SE3_FIL* fp, uint8_t *dataIn, uint32_t dataIn_len)
@@ -64,35 +64,32 @@ SE3_FRESULT crypto_filename(char *path, char *enc_name,
 	{
 		return SE3_FR_INVALID_NAME;
 	}
-	uint16_t commandError = 0;
-	uint8_t orig_filename[_MAX_LFN];
-	uint8_t bufferName[MAX_PATHNAME];
-	uint8_t SHAName[MAX_PATHNAME];
-	uint8_t finalPath[MAX_PATHNAME];
-	uint16_t lorig = 0, i = 0;
+	uint8_t orig_filename[_MAX_LFN+1];
+	uint8_t bufferName[B5_SHA256_DIGEST_SIZE];
+	uint8_t SHAName[2*B5_SHA256_DIGEST_SIZE+1];
+	uint8_t dirPath[MAX_PATHNAME];
+	uint16_t lorig, i;
 	B5_tSha256Ctx ctx;
-	int finalLen = 0;
-	memset(orig_filename, 0, MAX_PATHNAME * sizeof(char));
-	memset(bufferName, 0, MAX_PATHNAME * sizeof(char));
-	memset(SHAName, 0, MAX_PATHNAME * sizeof(char));
-	memset(finalPath, 0, MAX_PATHNAME * sizeof(char));
-	get_filename(path, (char*) orig_filename);
-	get_path(path, (char*) finalPath);
-	lorig = strlen((const char*) orig_filename);
-	if ((commandError = B5_Sha256_Init(&ctx)))
+	int dirPathLen;
+
+	get_filename(path, (char*) orig_filename, _MAX_LFN);
+	get_path(path, (char*) dirPath);
+	lorig = strnlen((const char*) orig_filename, _MAX_LFN);
+
+	if ((B5_SHA256_RES_OK != B5_Sha256_Init(&ctx)))
 	{
-		return commandError;
+		return SE3_FR_FILENAME_ENC_ERROR;
 	}
-	if ((commandError = B5_Sha256_Update(&ctx, (uint8_t*) orig_filename,
+	if ((B5_SHA256_RES_OK != B5_Sha256_Update(&ctx, (uint8_t*) orig_filename,
 			lorig * sizeof(uint8_t))))
 	{
-		return commandError;
+		return SE3_FR_FILENAME_ENC_ERROR;
 	}
-	if ((commandError = B5_Sha256_Finit(&ctx, (uint8_t*) bufferName)))
+	if ((B5_SHA256_RES_OK != B5_Sha256_Finit(&ctx, (uint8_t*) bufferName)))
 	{
-		return commandError;
+		return SE3_FR_FILENAME_ENC_ERROR;
 	}
-	if (strlen((const char*) finalPath) > MAX_PATHNAME - B5_SHA256_DIGEST_SIZE)
+	if (strlen((const char*) dirPath) > MAX_PATHNAME - 2*B5_SHA256_DIGEST_SIZE)
 	{
 		return SE3_FR_FILENAME_ENC_ERROR;
 	}
@@ -100,14 +97,15 @@ SE3_FRESULT crypto_filename(char *path, char *enc_name,
 	{
 		sprintf((char*) &(SHAName[i * 2]), "%02x", (uint8_t) bufferName[i]);
 	}
-	finalLen = strlen((const char*) finalPath);
+	dirPathLen = strlen((const char*) dirPath);
 	if (encoded_length != NULL)
-		*encoded_length = i * 2 + finalLen;
-	if (finalPath[0])
+		*encoded_length = i * 2 + dirPathLen;
+
+	if (dirPath[0])
 	{
-		memcpy(enc_name, finalPath, finalLen);
+		memcpy(enc_name, dirPath, dirPathLen);
 	}
-	memcpy(enc_name + finalLen, SHAName, i * 2 + 1);
+	memcpy(enc_name + dirPathLen, SHAName, 2*B5_SHA256_DIGEST_SIZE+1);
 	return SE3_FR_OK;
 }
 
@@ -141,7 +139,7 @@ void get_path(char *full_path, char *path)
 }
 
 static
-void get_filename(char *path, char *file_name)
+void get_filename(char *path, char *file_name, int maxLength)
 {
 	if ((file_name == NULL) || (path == NULL))
 	{
@@ -154,15 +152,15 @@ void get_filename(char *path, char *file_name)
 		f_name = strrchr(path, '\\');
 		if (f_name == NULL)
 		{
-			strncpy(file_name, path, MAX_PATHNAME);
+			strncpy(file_name, path, maxLength);
 		}
 		else
 		{
-			strncpy(file_name, f_name + 1, MAX_PATHNAME);
+			strncpy(file_name, f_name + 1, maxLength);
 		}
 	}
 	else
 	{
-		strncpy(file_name, f_name + 1, MAX_PATHNAME);
+		strncpy(file_name, f_name + 1, maxLength);
 	}
 }
