@@ -154,7 +154,7 @@ int main(void)
 
 
 	SE3_FIL fp;
-	res = secure_open(&fp, "prova2.txt", FA_CREATE_ALWAYS | FA_WRITE, 0, 1, 0);
+	res = secure_open(&fp, "prova2.txt", FA_CREATE_ALWAYS | FA_WRITE, 1, 0);
 	UINT bw;
 
 	char buff[5] = "eja2";
