@@ -63,7 +63,7 @@ void se3_key_read(se3_flash_it* it, se3_flash_key* key)
     SE3_GET32(it->addr, SE3_KEY_OFFSET_ID, key->id);
     SE3_GET16(it->addr, SE3_KEY_OFFSET_DATALEN, key->data_size);
 	if (key->data) {
-		memcpy(key->data, it->addr + 12, key->data_size);
+		memcpy(key->data, it->addr + SE3_KEY_OFFSET_DATA, key->data_size);
 	}
 }
 

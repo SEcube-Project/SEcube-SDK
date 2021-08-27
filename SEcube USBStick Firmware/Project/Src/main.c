@@ -132,6 +132,19 @@ int main(void)
 	/* USER CODE BEGIN */
 	device_init();
 
+
+	se3_flash_it f_it;
+	se3_flash_key key;
+
+	uint8_t keyData[] = "pro123vapro123va";
+
+	key.id = 1;
+	key.data = keyData;
+	key.data_size = 16;
+
+	if (!se3_key_find(1, &f_it))
+		se3_key_new(&f_it, &key);
+
 	volatile FRESULT res;
 	FATFS fs;
 
@@ -141,7 +154,7 @@ int main(void)
 
 
 	SE3_FIL fp;
-	res = secure_open(&fp, "prova2.txt", FA_CREATE_ALWAYS | FA_WRITE, 0, 0, 0);
+	res = secure_open(&fp, "prova2.txt", FA_CREATE_ALWAYS | FA_WRITE, 0, 1, 0);
 	UINT bw;
 
 	char buff[5] = "eja2";

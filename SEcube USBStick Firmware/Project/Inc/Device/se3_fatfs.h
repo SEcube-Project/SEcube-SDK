@@ -4,10 +4,19 @@
 #include "se3_security_core.h"
 #include "fatfs.h"
 
+#define SE3_FATFS_KEY_SIZE 16
+
+typedef struct
+{
+	uint32_t id;
+	uint8_t data[SE3_FATFS_KEY_SIZE];
+} se3_fatfs_key;
+
 typedef struct
 {
 	FIL fp;
-	se3_flash_key key;
+	se3_fatfs_key key;
+	uint8_t keyData[16];
 	uint16_t algo;
 	uint8_t decrypt_buffer[_MAX_SS];
 } SE3_FIL;

@@ -1,6 +1,6 @@
 #include "se3_fatfs.h"
 
-static bool find_and_read_key(uint32_t keyID, se3_flash_key* key);
+static bool find_and_read_key(uint32_t keyID, se3_fatfs_key* key);
 static SE3_FRESULT crypto_filename(char *path, char *enc_name, uint16_t *encoded_length);
 static void get_filename(char *path, char *file_name, int maxLength);
 static void get_path(char *full_path, char *path);
@@ -12,9 +12,8 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, int32_t mode, int32_t creati
 	char enc_name[MAX_PATHNAME];
 	uint16_t encoded_name_length;
 
-
-	//if(! find_and_read_key(keyID, &(se_fp->key)))
-	//	return SE3_FR_NO_KEY;
+	if(! find_and_read_key(keyID, &(se_fp->key)))
+		return SE3_FR_NO_KEY;
 
 	res = crypto_filename(path, enc_name, &encoded_name_length);
 	if (res != SE3_FR_OK)
@@ -23,6 +22,8 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, int32_t mode, int32_t creati
 	res = f_open(&(se_fp->fp), enc_name, mode);
 	if (res != SE3_FR_OK)
 		return res;
+
+
 
 	return SE3_FR_OK;
 }
@@ -35,6 +36,7 @@ SE3_FRESULT secure_read(SE3_FIL* fp, uint8_t *dataOut, uint32_t dataOut_len, uin
 SE3_FRESULT secure_write(SE3_FIL* fp, uint8_t *dataIn, uint32_t dataIn_len)
 {
 	UINT bw;
+	f_write(&(fp->fp), fp->key.data, SE3_FATFS_KEY_SIZE, &bw);
 	return f_write(&(fp->fp), dataIn, dataIn_len, &bw);
 }
 
@@ -44,14 +46,18 @@ SE3_FRESULT secure_close(SE3_FIL* fp)
 }
 
 static
-bool find_and_read_key(uint32_t keyID, se3_flash_key* key)
+bool find_and_read_key(uint32_t keyID, se3_fatfs_key* key)
 {
 	se3_flash_it iterator;
+	se3_flash_key flashKey;
+
+	flashKey.data = key->data;
+	memset(flashKey.data, 0, SE3_FATFS_KEY_SIZE);
 
 	if (!se3_key_find(keyID, &iterator))
 		return false;
 
-	se3_key_read(&iterator, key);
+	se3_key_read(&iterator, &flashKey);
 
 	return true;
 }
