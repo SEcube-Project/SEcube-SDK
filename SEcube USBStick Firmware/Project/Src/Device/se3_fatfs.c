@@ -35,6 +35,7 @@ typedef struct
 
 static bool find_and_read_key(uint32_t keyID, se3_fatfs_key* key);
 static SE3_FRESULT crypto_filename(char *path, char *enc_name_path, uint16_t *encoded_length);
+static SE3_FRESULT getSHA256string(uint8_t* input, int length, uint8_t* output);
 static void get_filename(char *path, char *file_name, int maxLength);
 static void get_path(char *full_path, char *path);
 static SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode);
@@ -54,11 +55,11 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 
 
 	//Create a new file if needed
-	if (mode & (FA_CREATE_ALWAYS | FA_CREATE_NEW))
+/*	if (mode & (FA_CREATE_ALWAYS | FA_CREATE_NEW))
 	{
 		return secure_create(se_fp, enc_name_path, mode);
 	}
-
+*/
 	//Otherwise open existing
 	res = f_open(&(se_fp->fp), enc_name_path, mode);
 	if (res != SE3_FR_OK)
@@ -124,23 +125,46 @@ SE3_FRESULT crypto_filename(char *path, char *enc_name_path,
 		return SE3_FR_INVALID_NAME;
 	}
 	uint8_t orig_filename[_MAX_LFN+1];
-	uint8_t bufferName[B5_SHA256_DIGEST_SIZE];
 	uint8_t SHAName[2*B5_SHA256_DIGEST_SIZE+1];
 	uint8_t dirPath[MAX_PATHNAME];
-	uint16_t lorig, i;
-	B5_tSha256Ctx ctx;
+	uint16_t lorig;
 	int dirPathLen;
 
 	get_filename(path, (char*) orig_filename, _MAX_LFN);
 	get_path(path, (char*) dirPath);
 	lorig = strnlen((const char*) orig_filename, _MAX_LFN);
 
+	if (strlen((const char*) dirPath) > MAX_PATHNAME - 2 * B5_SHA256_DIGEST_SIZE)
+	{
+		return SE3_FR_FILENAME_ENC_ERROR;
+	}
+
+	getSHA256string(orig_filename, lorig, SHAName);
+
+	dirPathLen = strlen((const char*) dirPath);
+	if (encoded_length != NULL)
+		*encoded_length = (2*B5_SHA256_DIGEST_SIZE+1) * 2 + dirPathLen;
+
+	if (dirPath[0])
+	{
+		memcpy(enc_name_path, dirPath, dirPathLen);
+	}
+	memcpy(enc_name_path + dirPathLen, SHAName, 2*B5_SHA256_DIGEST_SIZE+1);
+	return SE3_FR_OK;
+}
+
+static
+SE3_FRESULT getSHA256string(uint8_t* input, int length, uint8_t* output)
+{
+	B5_tSha256Ctx ctx;
+	uint8_t bufferName[B5_SHA256_DIGEST_SIZE];
+	uint16_t i;
+
 	if ((B5_SHA256_RES_OK != B5_Sha256_Init(&ctx)))
 	{
 		return SE3_FR_FILENAME_ENC_ERROR;
 	}
-	if ((B5_SHA256_RES_OK != B5_Sha256_Update(&ctx, (uint8_t*) orig_filename,
-			lorig * sizeof(uint8_t))))
+	if ((B5_SHA256_RES_OK != B5_Sha256_Update(&ctx, (uint8_t*) input, length)))
 	{
 		return SE3_FR_FILENAME_ENC_ERROR;
 	}
@@ -148,23 +172,12 @@ SE3_FRESULT crypto_filename(char *path, char *enc_name_path,
 	{
 		return SE3_FR_FILENAME_ENC_ERROR;
 	}
-	if (strlen((const char*) dirPath) > MAX_PATHNAME - 2*B5_SHA256_DIGEST_SIZE)
-	{
-		return SE3_FR_FILENAME_ENC_ERROR;
-	}
+
 	for (i = 0; i < B5_SHA256_DIGEST_SIZE; i++)
 	{
-		sprintf((char*) &(SHAName[i * 2]), "%02x", (uint8_t) bufferName[i]);
+		sprintf((char*) &(output[i * 2]), "%02x", (uint8_t) bufferName[i]);
 	}
-	dirPathLen = strlen((const char*) dirPath);
-	if (encoded_length != NULL)
-		*encoded_length = i * 2 + dirPathLen;
 
-	if (dirPath[0])
-	{
-		memcpy(enc_name_path, dirPath, dirPathLen);
-	}
-	memcpy(enc_name_path + dirPathLen, SHAName, 2*B5_SHA256_DIGEST_SIZE+1);
 	return SE3_FR_OK;
 }
 
