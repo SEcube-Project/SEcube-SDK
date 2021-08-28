@@ -47,7 +47,8 @@ typedef enum {
 	SE3_FR_INVALID_PARAMETER,	/* (19) Given parameter is invalid */
 	SE3_FR_NO_KEY,
 	SE3_FR_INVALID_ALGO,
-	SE3_FR_FILENAME_ENC_ERROR
+	SE3_FR_FILENAME_ENC_ERROR,
+	SE3_FR_HEADER_ENC_ERROR
 } SE3_FRESULT;
 
 SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo);

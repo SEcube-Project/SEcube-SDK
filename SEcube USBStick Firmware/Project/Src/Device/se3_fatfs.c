@@ -1,19 +1,25 @@
 #include "se3_fatfs.h"
+#include "se3_rand.h"
 
 #define SEFILE_NONCE_LEN 32
 #define SIGNATURE_LEN 32
-#define SEFILE_LOGIC_DATA _MAX_SS - sizeof(uint16_t) - SIGNATURE_LEN
+#define SE3_FILE_SECTOR_SIZE _MAX_SS
+#define SEFILE_IV_LEN 16
+#define SEFILE_LOGIC_DATA SE3_FILE_SECTOR_SIZE - sizeof(uint16_t) - SIGNATURE_LEN
 
 #pragma pack(push,1) //These are a physical structures, thus we don't want to allow
 					// the compiler to insert padding for memory alignment
 //Private structures
 typedef struct
 {
+	//Plaintext
 	uint8_t nonce_pbkdf2[SEFILE_NONCE_LEN];	/**< 32 random bytes storing the IV for generating a different key*/
 	uint32_t key_id;		/**< The ID of the key used to encrypt this file. */
 	uint16_t algorithm;		/**< The algorithm used to encrypt this file. */
 	uint8_t padding[10];	/**< Padding used to reach a SEkey header size which is a multiple of 16. */
-	uint8_t nonce_ctr[16];		            /**< 16 random bytes storing the IV for next sectors*/
+
+	//Encoded
+	uint8_t nonce_ctr[SEFILE_IV_LEN];       /**< 16 random bytes storing the IV for next sectors*/
     int32_t magic;				            /**< 4 bytes used to represent file type (not used yet)*/
     int16_t ver;				            /**< 2 bytes used to represent current filesystem version (not used yet)*/
     int32_t uid;				            /**< 4 bytes not used yet*/
@@ -40,6 +46,8 @@ typedef struct
 
 static bool find_and_read_key(uint32_t keyID, se3_fatfs_key* key);
 static SE3_FRESULT crypto_filename(char *path, char *enc_name_path, uint16_t *encoded_length);
+static SE3_FRESULT crypt_header(uint8_t* input_data, uint8_t* output_data, uint16_t algo, uint32_t keyID, uint16_t direction);
+static SE3_FRESULT initialise_crypto_context(uint16_t algo, uint32_t keyID, uint16_t mode, uint32_t* sid);
 static SE3_FRESULT getSHA256string(uint8_t* input, int length, uint8_t* output);
 static void get_filename(char *path, char *file_name, int maxLength);
 static void get_path(char *full_path, char *path);
@@ -60,11 +68,11 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 
 
 	//Create a new file if needed
-/*	if (mode & (FA_CREATE_ALWAYS | FA_CREATE_NEW))
+	if (mode & (FA_CREATE_ALWAYS | FA_CREATE_NEW))
 	{
 		return secure_create(se_fp, enc_name_path, mode);
 	}
-*/
+
 	//Otherwise open existing
 	res = f_open(&(se_fp->fp), enc_name_path, mode);
 	if (res != SE3_FR_OK)
@@ -74,22 +82,77 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 }
 
 static
-SE3_FRESULT secure_create(SE3_FIL* se_fp, char* enc_name_path, BYTE mode)
+SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 {
 	SE3_FRESULT res;
+	char enc_name_path[MAX_PATHNAME];
+	uint16_t encoded_name_length;
+	char filename[_MAX_LFN];
+	uint8_t* padding_start;
+
 
 	//The first sector contains the header only
 	SEFILE_SECTOR header_sector;
+
+	res = crypto_filename(path, enc_name_path, &encoded_name_length);
+		if (res != SE3_FR_OK)
+			return res;
 
 	res = f_open(&(se_fp->fp), enc_name_path, mode);
 	if (res != SE3_FR_OK)
 		return res;
 
+	//Prepare header
+	se3_rand(SEFILE_NONCE_LEN, (uint8_t*) &(header_sector.header.nonce_pbkdf2));
 	header_sector.header.key_id = se_fp->key.id;
 	header_sector.header.algorithm = se_fp->algo;
+	memset(&(header_sector.header.padding), 0, 10);
+
+	header_sector.header.magic = 0;
+	se3_rand(SEFILE_IV_LEN, (uint8_t*) &(header_sector.header.nonce_ctr));
+	header_sector.header.uid = 0;
+	header_sector.header.uid_cnt = 0;
+	header_sector.header.ver = 0;
+
+
+	get_filename(path, filename, _MAX_LFN);
+	memcpy(&header_sector + sizeof(SEFILE_HEADER), filename, strnlen(filename, _MAX_LFN));
+	padding_start = (uint8_t*) &header_sector+sizeof(SEFILE_HEADER)+strnlen(filename, _MAX_LFN);
+	se3_rand(SEFILE_IV_LEN, padding_start);
+
+
+	return SE3_FR_OK;
+}
+
+static
+SE3_FRESULT crypt_header(uint8_t* input_data, uint8_t* output_data, uint16_t algo, uint32_t keyID, uint16_t direction)
+{
+	SE3_FRESULT res;
+	uint32_t sid;
+
+	if ( (res = initialise_crypto_context(algo, keyID, SE3_FEEDBACK_ECB | direction, &sid)) != SE3_FR_OK)
+		return res;
 
 
 
+	return SE3_FR_OK;
+}
+
+static
+SE3_FRESULT initialise_crypto_context(uint16_t algo, uint32_t keyID, uint16_t mode, uint32_t* sid)
+{
+	uint8_t request[SE3_CMD1_CRYPTO_INIT_REQ_SIZE];
+	uint8_t response[SE3_CMD1_CRYPTO_INIT_RESP_SIZE];
+	uint16_t response_size;
+
+	memcpy(request + SE3_CMD1_CRYPTO_INIT_REQ_OFF_ALGO, &algo, 2);
+	memcpy(request + SE3_CMD1_CRYPTO_INIT_REQ_OFF_MODE, &mode, 2);
+	memcpy(request + SE3_CMD1_CRYPTO_INIT_REQ_OFF_KEY_ID, &keyID, 4);
+	uint16_t rc = crypto_init(SE3_CMD1_CRYPTO_INIT_REQ_SIZE, request, &response_size, response);
+	if((rc != SE3_OK) || (response_size != SE3_CMD1_CRYPTO_INIT_RESP_SIZE)){
+		return SE3_FR_HEADER_ENC_ERROR;
+	}
+	memcpy(sid, response+SE3_CMD1_CRYPTO_INIT_RESP_OFF_SID, response_size); // get session id from crypto_init()
 	return SE3_FR_OK;
 }
 
