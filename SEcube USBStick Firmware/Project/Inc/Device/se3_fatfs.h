@@ -16,7 +16,6 @@ typedef struct
 {
 	FIL fp;
 	se3_fatfs_key key;
-	uint8_t keyData[16];
 	uint16_t algo;
 	uint8_t decrypt_buffer[_MAX_SS];
 } SE3_FIL;
