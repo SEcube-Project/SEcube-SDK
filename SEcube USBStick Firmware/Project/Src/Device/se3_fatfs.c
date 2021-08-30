@@ -7,7 +7,7 @@
 #define SE3_FILE_SECTOR_SIZE _MAX_SS
 #define SE3_SECTOR_DATA_SIZE (SE3_FILE_SECTOR_SIZE - SIGNATURE_LEN)
 #define SEFILE_IV_LEN 16
-#define SEFILE_LOGIC_DATA SE3_FILE_SECTOR_SIZE - sizeof(uint16_t) - SIGNATURE_LEN
+#define SEFILE_LOGIC_DATA (SE3_FILE_SECTOR_SIZE - sizeof(uint16_t) - SIGNATURE_LEN)
 
 #pragma pack(push,1) //These are a physical structures, thus we don't want to allow
 					// the compiler to insert padding for memory alignment
@@ -64,18 +64,17 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 	if(! find_and_read_key(keyID, &(se_fp->key)))
 		return SE3_FR_NO_KEY;
 
+	//Create a new file if needed
+	if (mode & (FA_CREATE_ALWAYS | FA_CREATE_NEW))
+	{
+		return secure_create(se_fp, path, mode);
+	}
+
+	//Otherwise open existing
 	res = crypto_filename(path, enc_name_path, &encoded_name_length);
 	if (res != SE3_FR_OK)
 		return res;
 
-
-	//Create a new file if needed
-	if (mode & (FA_CREATE_ALWAYS | FA_CREATE_NEW))
-	{
-		return secure_create(se_fp, enc_name_path, mode);
-	}
-
-	//Otherwise open existing
 	res = f_open(&(se_fp->fp), enc_name_path, mode);
 	if (res != SE3_FR_OK)
 		return res;
@@ -91,6 +90,8 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 	uint16_t encoded_name_length;
 	char filename[_MAX_LFN];
 	uint8_t* padding_start;
+	uint8_t* filename_start;
+	size_t filename_len;
 
 
 	//The first sector contains the header only
@@ -118,10 +119,14 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 
 
 	get_filename(path, filename, _MAX_LFN);
-	memcpy(&header_sector + sizeof(SEFILE_HEADER), filename, strnlen(filename, _MAX_LFN));
-	padding_start = (uint8_t*) &header_sector+sizeof(SEFILE_HEADER)+strnlen(filename, _MAX_LFN);
-	se3_rand(SEFILE_IV_LEN, padding_start);
+	filename_len = strnlen(filename, _MAX_LFN);
+	header_sector.header.fname_len = filename_len;
+	filename_start = header_sector.data + sizeof(SEFILE_HEADER);
+	memcpy(filename_start, filename, filename_len);
+	padding_start = (uint8_t*) header_sector.data + sizeof(SEFILE_HEADER)+filename_len;
+	se3_rand(SEFILE_LOGIC_DATA-sizeof(SEFILE_HEADER)-filename_len, padding_start);
 
+	f_write(&(se_fp->fp), (uint8_t*) &header_sector, SE3_FILE_SECTOR_SIZE, NULL);
 
 	return SE3_FR_OK;
 }

@@ -159,7 +159,7 @@ int main(void)
 
 	char buff[5] = "eja3";
 
-	secure_write(&fp, (void *) buff, 5);
+	secure_write(&fp, (void *) buff, 4);
 	secure_close(&fp);
 
 	device_loop();
