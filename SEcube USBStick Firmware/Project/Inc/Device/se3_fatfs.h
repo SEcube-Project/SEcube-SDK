@@ -8,14 +8,8 @@
 
 typedef struct
 {
-	uint32_t id;
-	uint8_t data[SE3_FATFS_KEY_SIZE];
-} se3_fatfs_key;
-
-typedef struct
-{
 	FIL fp;
-	se3_fatfs_key key;
+	uint32_t keyID;
 	uint16_t algo;
 	uint8_t decrypt_buffer[_MAX_SS];
 } SE3_FIL;
@@ -48,7 +42,8 @@ typedef enum {
 	SE3_FR_NO_KEY,
 	SE3_FR_INVALID_ALGO,
 	SE3_FR_FILENAME_ENC_ERROR,
-	SE3_FR_HEADER_ENC_ERROR
+	SE3_FR_HEADER_ENC_ERROR,
+	SE3_FR_CYPHER_ERROR
 } SE3_FRESULT;
 
 SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo);

@@ -46,10 +46,11 @@ typedef struct
 
 #pragma pack(pop)
 
-static bool find_and_read_key(uint32_t keyID, se3_fatfs_key* key);
+//static bool find_and_read_key(uint32_t keyID, se3_fatfs_key* key);
 static SE3_FRESULT crypto_filename(char *path, char *enc_name_path, uint16_t *encoded_length);
 static SE3_FRESULT crypt_header(uint8_t* input_data, uint8_t* output_data, uint16_t algo, uint32_t keyID, uint16_t direction);
 static SE3_FRESULT initialise_crypto_context(uint16_t algo, uint32_t keyID, uint16_t mode, uint32_t* sid);
+static SE3_FRESULT set_nonce(uint32_t sid, uint8_t* nonce, uint16_t nonce_len);
 static SE3_FRESULT getSHA256string(uint8_t* input, int length, uint8_t* output);
 static void get_filename(char *path, char *file_name, int maxLength);
 static void get_path(char *full_path, char *path);
@@ -61,8 +62,9 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 	char enc_name_path[MAX_PATHNAME];
 	uint16_t encoded_name_length;
 
-	if(! find_and_read_key(keyID, &(se_fp->key)))
-		return SE3_FR_NO_KEY;
+
+	se_fp->algo = algo;
+	se_fp->keyID = keyID;
 
 	//Create a new file if needed
 	if (mode & (FA_CREATE_ALWAYS | FA_CREATE_NEW))
@@ -97,6 +99,8 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 	//The first sector contains the header only
 	SEFILE_SECTOR header_sector;
 
+	uint8_t encoded_header_sector[sizeof(SEFILE_SECTOR)];
+
 	res = crypto_filename(path, enc_name_path, &encoded_name_length);
 		if (res != SE3_FR_OK)
 			return res;
@@ -107,7 +111,7 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 
 	//Prepare header
 	se3_rand(SEFILE_NONCE_LEN, (uint8_t*) &(header_sector.header.nonce_pbkdf2));
-	header_sector.header.key_id = se_fp->key.id;
+	header_sector.header.key_id = se_fp->keyID;
 	header_sector.header.algorithm = se_fp->algo;
 	memset(&(header_sector.header.padding), 0, 10);
 
@@ -126,7 +130,10 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 	padding_start = (uint8_t*) header_sector.data + sizeof(SEFILE_HEADER)+filename_len;
 	se3_rand(SEFILE_LOGIC_DATA-sizeof(SEFILE_HEADER)-filename_len, padding_start);
 
-	f_write(&(se_fp->fp), (uint8_t*) &header_sector, SE3_FILE_SECTOR_SIZE, NULL);
+	if ( (res = crypt_header(header_sector.data, encoded_header_sector, se_fp->algo, se_fp->keyID, SE3_DIR_ENCRYPT) ))
+		return res;
+
+	f_write(&(se_fp->fp), encoded_header_sector, SE3_FILE_SECTOR_SIZE, NULL);
 
 	return SE3_FR_OK;
 }
@@ -137,13 +144,16 @@ SE3_FRESULT crypt_header(uint8_t* input_data, uint8_t* output_data, uint16_t alg
 	SE3_FRESULT res;
 	uint32_t sid;
 
+	uint8_t *nonce_pbkdf2 = (uint8_t*)input_data;
+
 	if ( (res = initialise_crypto_context(algo, keyID, SE3_FEEDBACK_ECB | direction, &sid)) != SE3_FR_OK)
 		return res;
 
+	if ( (res = set_nonce(sid, nonce_pbkdf2, SEFILE_NONCE_LEN)))
+			return res;
 
+	uint16_t flags = SE3_CRYPTO_FLAG_FINIT;
 
-	uint16_t flags = 0;
-	uint8_t *nonce_pbkdf2 = (uint8_t*)input_data;
 
 	size_t datain_len = SE3_SECTOR_DATA_SIZE;
 	datain_len -= (SEFILE_NONCE_LEN + SEFILE_HEADER_PLAINTXT_LEN);
@@ -155,13 +165,14 @@ SE3_FRESULT crypt_header(uint8_t* input_data, uint8_t* output_data, uint16_t alg
 
 	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_SID, &sid, 4);
 	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_FLAGS, &flags, 2);
+	memset(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATAIN1_LEN, 0, 2);
 	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATAIN2_LEN, &datain_len, 2);
 	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATA, input_data + (SEFILE_NONCE_LEN + SEFILE_HEADER_PLAINTXT_LEN), datain_len);
 
 	request_size = 4 + 2 + 2 + datain_len;
 
-	if((res = crypto_update(request_size, request, &response_size, response)) != SE3_OK){
-		return res;
+	if((crypto_update(request_size, request, &response_size, response)) != SE3_OK){
+		return SE3_FR_CYPHER_ERROR;
 	}
 
 	memcpy(((uint8_t*)output_data)+SEFILE_NONCE_LEN + SEFILE_HEADER_PLAINTXT_LEN, ((uint8_t*)response) + SE3_CMD1_CRYPTO_UPDATE_RESP_OFF_DATA, response_size); //copy response data
@@ -175,7 +186,7 @@ SE3_FRESULT crypt_header(uint8_t* input_data, uint8_t* output_data, uint16_t alg
 static
 SE3_FRESULT initialise_crypto_context(uint16_t algo, uint32_t keyID, uint16_t mode, uint32_t* sid)
 {
-	uint8_t request[SE3_CMD1_CRYPTO_INIT_REQ_SIZE];
+	uint8_t request[1024];
 	uint8_t response[SE3_CMD1_CRYPTO_INIT_RESP_SIZE];
 	uint16_t response_size;
 
@@ -184,9 +195,34 @@ SE3_FRESULT initialise_crypto_context(uint16_t algo, uint32_t keyID, uint16_t mo
 	memcpy(request + SE3_CMD1_CRYPTO_INIT_REQ_OFF_KEY_ID, &keyID, 4);
 	uint16_t rc = crypto_init(SE3_CMD1_CRYPTO_INIT_REQ_SIZE, request, &response_size, response);
 	if((rc != SE3_OK) || (response_size != SE3_CMD1_CRYPTO_INIT_RESP_SIZE)){
-		return SE3_FR_HEADER_ENC_ERROR;
+		return SE3_FR_CYPHER_ERROR;
 	}
-	memcpy(sid, response+SE3_CMD1_CRYPTO_INIT_RESP_OFF_SID, response_size); // get session id from crypto_init()
+	memcpy(sid, response+SE3_CMD1_CRYPTO_INIT_RESP_OFF_SID, SE3_CMD1_CRYPTO_INIT_RESP_SIZE); // get session id from crypto_init()
+	return SE3_FR_OK;
+}
+
+static
+SE3_FRESULT set_nonce(uint32_t sid, uint8_t* nonce, uint16_t nonce_len)
+{
+	uint16_t flags = SE3_CRYPTO_FLAG_SETNONCE;
+
+	uint8_t request[SE3_CRYPTO_MAX_DATAIN];
+	uint8_t response[SE3_CRYPTO_MAX_DATAOUT];
+	uint16_t response_size = 0;
+	uint16_t request_size = 0;
+
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_SID, &sid, 4);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_FLAGS, &flags, 2);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATAIN1_LEN, &nonce_len, 2);
+	memset(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATAIN2_LEN, 0, 2);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATA, nonce, nonce_len);
+
+	request_size = 4 + 2 + 2 + nonce_len;
+
+	if((crypto_update(request_size, request, &response_size, response)) != SE3_OK){
+		return SE3_FR_CYPHER_ERROR;
+		}
+
 	return SE3_FR_OK;
 }
 
@@ -198,7 +234,7 @@ SE3_FRESULT secure_read(SE3_FIL* fp, uint8_t *dataOut, uint32_t dataOut_len, uin
 SE3_FRESULT secure_write(SE3_FIL* fp, uint8_t *dataIn, uint32_t dataIn_len)
 {
 	UINT bw;
-	f_write(&(fp->fp), fp->key.data, SE3_FATFS_KEY_SIZE, &bw);
+	//f_write(&(fp->fp), fp->keyID, SE3_FATFS_KEY_SIZE, &bw);
 	return f_write(&(fp->fp), dataIn, dataIn_len, &bw);
 }
 
@@ -207,7 +243,7 @@ SE3_FRESULT secure_close(SE3_FIL* fp)
 	return f_close(&(fp->fp));
 }
 
-static
+/*static
 bool find_and_read_key(uint32_t keyID, se3_fatfs_key* key)
 {
 	se3_flash_it iterator;
@@ -222,7 +258,7 @@ bool find_and_read_key(uint32_t keyID, se3_fatfs_key* key)
 	se3_key_read(&iterator, &flashKey);
 
 	return true;
-}
+}*/
 
 static
 SE3_FRESULT crypto_filename(char *path, char *enc_name_path,
