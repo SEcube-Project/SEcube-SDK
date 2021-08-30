@@ -3,7 +3,9 @@
 
 #define SEFILE_NONCE_LEN 32
 #define SIGNATURE_LEN 32
+#define SEFILE_HEADER_PLAINTXT_LEN 16
 #define SE3_FILE_SECTOR_SIZE _MAX_SS
+#define SE3_SECTOR_DATA_SIZE (SE3_FILE_SECTOR_SIZE - SIGNATURE_LEN)
 #define SEFILE_IV_LEN 16
 #define SEFILE_LOGIC_DATA SE3_FILE_SECTOR_SIZE - sizeof(uint16_t) - SIGNATURE_LEN
 
@@ -134,6 +136,33 @@ SE3_FRESULT crypt_header(uint8_t* input_data, uint8_t* output_data, uint16_t alg
 		return res;
 
 
+
+	uint16_t flags = 0;
+	uint8_t *nonce_pbkdf2 = (uint8_t*)input_data;
+
+	size_t datain_len = SE3_SECTOR_DATA_SIZE;
+	datain_len -= (SEFILE_NONCE_LEN + SEFILE_HEADER_PLAINTXT_LEN);
+
+	uint8_t request[SE3_CRYPTO_MAX_DATAIN];
+	uint8_t response[SE3_CRYPTO_MAX_DATAOUT];
+	uint16_t response_size = 0;
+	uint16_t request_size = 0;
+
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_SID, &sid, 4);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_FLAGS, &flags, 2);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATAIN2_LEN, &datain_len, 2);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATA, input_data + (SEFILE_NONCE_LEN + SEFILE_HEADER_PLAINTXT_LEN), datain_len);
+
+	request_size = 4 + 2 + 2 + datain_len;
+
+	if((res = crypto_update(request_size, request, &response_size, response)) != SE3_OK){
+		return res;
+	}
+
+	memcpy(((uint8_t*)output_data)+SEFILE_NONCE_LEN + SEFILE_HEADER_PLAINTXT_LEN, ((uint8_t*)response) + SE3_CMD1_CRYPTO_UPDATE_RESP_OFF_DATA, response_size); //copy response data
+
+	memcpy(((uint8_t*)output_data)+SEFILE_NONCE_LEN, ((uint8_t*)input_data)+SEFILE_NONCE_LEN, SEFILE_HEADER_PLAINTXT_LEN); // copy sekey header as plaintext
+	memcpy(output_data, input_data, SEFILE_NONCE_LEN); // copy the field named "nonce_pbkdf2" as plaintext into the header
 
 	return SE3_FR_OK;
 }
