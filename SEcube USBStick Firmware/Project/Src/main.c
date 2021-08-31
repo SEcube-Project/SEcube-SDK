@@ -162,6 +162,8 @@ int main(void)
 	secure_write(&fp, (void *) buff, 4);
 	secure_close(&fp);
 
+	res = secure_open(&fp, "prova3.txt", FA_READ, 1, SE3_ALGO_AES_HMACSHA256);
+
 	device_loop();
 	/* USER CODE END  */
 
