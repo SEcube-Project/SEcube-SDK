@@ -51,28 +51,119 @@ static void get_filename(char *path, char *file_name, int maxLength);
 static void get_path(char *full_path, char *path);
 static SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode);
 static SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode);
-static SE3_FRESULT read_sector(SE3_FIL* se_fp, uint16_t sector_id);
+static SE3_FRESULT read_sector(SE3_FIL* se_fp, uint32_t sector_id);
+static SE3_FRESULT write_sector(SE3_FIL* se_fp, uint32_t sector_id);
 static SE3_FRESULT crypt_sector(uint8_t* input_data, uint8_t* output_data, uint16_t algo, uint32_t keyID, uint8_t* IV, uint16_t direction);
 static SE3_FRESULT execute_crypto_sector(uint32_t sid, uint8_t* input_data, uint8_t* output_data);
 static SE3_FRESULT set_IV(uint32_t sid, uint8_t* IV, uint16_t IV_len);
+static void compute_IV(uint8_t* base_IV, uint8_t* sector_IV, uint32_t sector_id);
 
 SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo)
 {
 	SE3_FRESULT res;
 
 
+	se_fp->mode = mode;
+
 	//Create a new file if needed
 	if (mode & (FA_CREATE_ALWAYS | FA_CREATE_NEW))
 	{
 		se_fp->algo = algo;
 		se_fp->keyID = keyID;
-		return secure_create(se_fp, path, mode);
+		if ((res = secure_create(se_fp, path, mode | FA_READ)))
+			return res;
+	}
+	else
+	{
+	//Otherwise open existing
+		if ((res = load_existing_file(se_fp, path, mode | FA_READ) ))
+			return res;
 	}
 
-	//Otherwise open existing
-	return load_existing_file(se_fp, path, mode);
+	if (!f_eof(&(se_fp->fp)))
+	{
+		if ((res = read_sector(se_fp, 1)))
+			return res;
+	} else
+	{
+		se_fp->decrypt_buffer_size = 0;
+	}
+
+	return SE3_FR_OK;
+}
+
+SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, uint32_t *bytesRead)
+{
+	return f_read(&(se_fp->fp), dataOut, dataOut_len, (uint*) bytesRead);
+}
+
+SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
+{
+	SE3_FRESULT res;
+	uint32_t remaining_data;
+	uint32_t write_pointer;
+	uint16_t byte_to_write;
+	uint16_t sector_offset;
+
+	write_pointer = 0;
+	remaining_data = dataIn_len;
+	sector_offset = (uint16_t) (se_fp->pointer % SEFILE_LOGIC_DATA);
+	while (remaining_data > 0)
+	{
+		if (remaining_data + sector_offset >= SEFILE_LOGIC_DATA)
+		{
+			byte_to_write = SEFILE_LOGIC_DATA - sector_offset;
+
+			//Fill all the available space in the buffer
+			memcpy(se_fp->decrypt_buffer + sector_offset, dataIn + write_pointer, byte_to_write);
+			se_fp->decrypt_buffer_size = SEFILE_LOGIC_DATA;
+			write_sector(se_fp, se_fp->pointer/SEFILE_LOGIC_DATA +1);
+
+			se_fp->pointer += byte_to_write;
+			write_pointer += byte_to_write;
+			remaining_data -= byte_to_write;
+			sector_offset = 0;
+			se_fp->dirty_bit = false;
+			if (!f_eof(&(se_fp->fp)))
+			{
+				if ((res = read_sector(se_fp, se_fp->pointer/SEFILE_LOGIC_DATA +1)))
+					return res;
+			} else
+			{
+				se_fp->decrypt_buffer_size = 0;
+			}
+
+		}
+		else
+		{
+			memcpy(se_fp->decrypt_buffer+sector_offset, dataIn + write_pointer, remaining_data);
+			se_fp->pointer += remaining_data;
+			if (sector_offset+remaining_data > se_fp->decrypt_buffer_size)
+				se_fp->decrypt_buffer_size = sector_offset+remaining_data;
+			remaining_data = 0;
+			se_fp->dirty_bit = true;
+		}
+	}
 
 
+	return SE3_FR_OK;
+}
+
+SE3_FRESULT secure_close(SE3_FIL* se_fp)
+{
+	SE3_FRESULT res;
+
+	if (se_fp->decrypt_buffer_size > 0 )
+	{
+		if (se_fp->decrypt_buffer_size < SEFILE_LOGIC_DATA)
+		{
+			se3_rand(SEFILE_LOGIC_DATA-se_fp->decrypt_buffer_size, se_fp->decrypt_buffer + se_fp->decrypt_buffer_size);
+		}
+		write_sector(se_fp, se_fp->pointer/SEFILE_LOGIC_DATA + 1);
+	}
+
+	if ( (res = f_close(&(se_fp->fp)) ) )
+			return res;
 
 	return SE3_FR_OK;
 }
@@ -90,8 +181,7 @@ SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode)
 	if ((res = crypto_filename(path, enc_name_path, &encoded_name_length)))
 		return res;
 
-	//Open the file in read mode in order to read header
-	if ((res = f_open(&(se_fp->fp), enc_name_path, FA_READ)))
+	if ((res = f_open(&(se_fp->fp), enc_name_path, mode)))
 		return res;
 
 	if((res = f_read(&(se_fp->fp), encoded_header_sector.data, sizeof(SEFILE_SECTOR), &br)))
@@ -107,16 +197,9 @@ SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode)
 
 	memcpy(se_fp->IV, header_sector.header.nonce_ctr, SEFILE_IV_LEN);
 
+	se_fp->pointer = 0;
+	se_fp->dirty_bit = false;
 
-	if (mode != FA_READ)
-	{
-		if ((res = f_close(&(se_fp->fp))))
-			return res;
-
-		//reopen file with user selected mode
-		if ((res = f_open(&(se_fp->fp), enc_name_path, mode)))
-			return res;
-	}
 
 	return SE3_FR_OK;
 }
@@ -124,12 +207,12 @@ SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode)
 //Writes decrypt buffer inside specified sector_id
 //Valid sector_id(s) start from 1.
 static
-SE3_FRESULT write_sector(SE3_FIL* se_fp, uint16_t sector_id)
+SE3_FRESULT write_sector(SE3_FIL* se_fp, uint32_t sector_id)
 {
 	SE3_FRESULT res;
 	SEFILE_SECTOR data_sector;
 	SEFILE_SECTOR encoded_data_sector;
-	UINT br;
+	uint8_t sector_IV[SEFILE_IV_LEN];
 
 
 	if (sector_id == 0)
@@ -143,7 +226,9 @@ SE3_FRESULT write_sector(SE3_FIL* se_fp, uint16_t sector_id)
 	memcpy(data_sector.data, se_fp->decrypt_buffer, SEFILE_LOGIC_DATA);
 	data_sector.len = se_fp->decrypt_buffer_size;
 
-	if ((res = crypt_sector(data_sector.data, encoded_data_sector.data, se_fp->algo, se_fp->keyID, se_fp->IV, SE3_DIR_DECRYPT)))
+	compute_IV(se_fp->IV, sector_IV, sector_id);
+
+	if ((res = crypt_sector(data_sector.data, encoded_data_sector.data, se_fp->algo, se_fp->keyID, sector_IV, SE3_DIR_ENCRYPT)))
 		return res;
 
 	if ((res = f_write(&(se_fp->fp), encoded_data_sector.data, SE3_FILE_SECTOR_SIZE, NULL)))
@@ -157,13 +242,13 @@ SE3_FRESULT write_sector(SE3_FIL* se_fp, uint16_t sector_id)
 //Reads a sector, decrypt it and places it in decrypt buffer
 //Valid sector_id(s) start from 1.
 static
-SE3_FRESULT read_sector(SE3_FIL* se_fp, uint16_t sector_id)
+SE3_FRESULT read_sector(SE3_FIL* se_fp, uint32_t sector_id)
 {
 	SE3_FRESULT res;
 	SEFILE_SECTOR data_sector;
 	SEFILE_SECTOR encoded_data_sector;
 	UINT br;
-
+	uint8_t sector_IV[SEFILE_IV_LEN];
 
 	if (sector_id == 0)
 		return SE3_FR_INVALID_PARAMETER;
@@ -179,13 +264,33 @@ SE3_FRESULT read_sector(SE3_FIL* se_fp, uint16_t sector_id)
 	if (br < SE3_FILE_SECTOR_SIZE)
 		return SE3_FR_DATA_ENC_ERROR;
 
-	if ((res = crypt_sector(encoded_data_sector.data, data_sector.data, se_fp->algo, se_fp->keyID, se_fp->IV, SE3_DIR_DECRYPT)))
+	compute_IV(se_fp->IV, sector_IV, sector_id);
+
+	if ((res = crypt_sector(encoded_data_sector.data, data_sector.data, se_fp->algo, se_fp->keyID, sector_IV, SE3_DIR_DECRYPT)))
 		return res;
 
 	memcpy(se_fp->decrypt_buffer, data_sector.data, SEFILE_LOGIC_DATA);
 	se_fp->decrypt_buffer_size = data_sector.len;
 
 	return SE3_FR_OK;
+}
+
+static
+void compute_IV(uint8_t* base_IV, uint8_t* sector_IV, uint32_t sector_id)
+{
+	uint32_t current_block_index = (sector_id - 1) * (SE3_SECTOR_ENCRYPTED_DATA_SIZE / B5_AES_BLK_SIZE);
+	uint8_t old_V, cb = 0;
+	uint8_t j;
+	memcpy(sector_IV, base_IV, SEFILE_IV_LEN);
+	j = 15;
+	do {
+		old_V = sector_IV[j];
+		sector_IV[j] += current_block_index & 0xFF;
+		current_block_index = (current_block_index>>8);
+		if (cb)
+			sector_IV[j]++;
+		cb = sector_IV[j] < old_V;
+	} while( j-- && cb);
 }
 
 static
@@ -321,6 +426,9 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 	if ((res = f_write(&(se_fp->fp), encoded_header_sector, SE3_FILE_SECTOR_SIZE, NULL)))
 		return res;
 
+	se_fp->pointer = 0;
+	se_fp->dirty_bit = false;
+
 	return SE3_FR_OK;
 }
 
@@ -429,22 +537,7 @@ SE3_FRESULT execute_crypto_header(uint32_t sid, uint8_t* input_data, uint8_t* ou
 	return SE3_FR_OK;
 }
 
-SE3_FRESULT secure_read(SE3_FIL* fp, uint8_t *dataOut, uint32_t dataOut_len, uint32_t *bytesRead)
-{
-	return f_read(&(fp->fp), dataOut, dataOut_len, (uint*) bytesRead);
-}
 
-SE3_FRESULT secure_write(SE3_FIL* fp, uint8_t *dataIn, uint32_t dataIn_len)
-{
-	UINT bw;
-	//f_write(&(fp->fp), fp->keyID, SE3_FATFS_KEY_SIZE, &bw);
-	return f_write(&(fp->fp), dataIn, dataIn_len, &bw);
-}
-
-SE3_FRESULT secure_close(SE3_FIL* fp)
-{
-	return f_close(&(fp->fp));
-}
 
 /*static
 bool find_and_read_key(uint32_t keyID, se3_fatfs_key* key)

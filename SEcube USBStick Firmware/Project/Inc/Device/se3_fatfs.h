@@ -21,7 +21,9 @@ typedef struct
 	uint16_t algo;
 	uint8_t decrypt_buffer[SEFILE_LOGIC_DATA];
 	uint16_t decrypt_buffer_size;
-	uint8_t* pointer;
+	uint8_t mode;
+	bool dirty_bit;
+	uint32_t pointer;
 	uint8_t IV[SEFILE_IV_LEN];
 } SE3_FIL;
 
