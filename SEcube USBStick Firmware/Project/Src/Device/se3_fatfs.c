@@ -51,6 +51,10 @@ static void get_filename(char *path, char *file_name, int maxLength);
 static void get_path(char *full_path, char *path);
 static SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode);
 static SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode);
+static SE3_FRESULT read_sector(SE3_FIL* se_fp, uint16_t sector_id);
+static SE3_FRESULT crypt_sector(uint8_t* input_data, uint8_t* output_data, uint16_t algo, uint32_t keyID, uint8_t* IV, uint16_t direction);
+static SE3_FRESULT execute_crypto_sector(uint32_t sid, uint8_t* input_data, uint8_t* output_data);
+static SE3_FRESULT set_IV(uint32_t sid, uint8_t* IV, uint16_t IV_len);
 
 SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo)
 {
@@ -113,6 +117,153 @@ SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode)
 		if ((res = f_open(&(se_fp->fp), enc_name_path, mode)))
 			return res;
 	}
+
+	return SE3_FR_OK;
+}
+
+//Writes decrypt buffer inside specified sector_id
+//Valid sector_id(s) start from 1.
+static
+SE3_FRESULT write_sector(SE3_FIL* se_fp, uint16_t sector_id)
+{
+	SE3_FRESULT res;
+	SEFILE_SECTOR data_sector;
+	SEFILE_SECTOR encoded_data_sector;
+	UINT br;
+
+
+	if (sector_id == 0)
+		return SE3_FR_INVALID_PARAMETER;
+	if (f_tell(&(se_fp->fp)) != SE3_FILE_SECTOR_SIZE*sector_id)
+	{
+		if ((res = f_lseek(&(se_fp->fp), SE3_FILE_SECTOR_SIZE*sector_id)))
+			return res;
+	}
+
+	memcpy(data_sector.data, se_fp->decrypt_buffer, SEFILE_LOGIC_DATA);
+	data_sector.len = se_fp->decrypt_buffer_size;
+
+	if ((res = crypt_sector(data_sector.data, encoded_data_sector.data, se_fp->algo, se_fp->keyID, se_fp->IV, SE3_DIR_DECRYPT)))
+		return res;
+
+	if ((res = f_write(&(se_fp->fp), encoded_data_sector.data, SE3_FILE_SECTOR_SIZE, NULL)))
+		return res;
+
+	return SE3_FR_OK;
+
+}
+
+
+//Reads a sector, decrypt it and places it in decrypt buffer
+//Valid sector_id(s) start from 1.
+static
+SE3_FRESULT read_sector(SE3_FIL* se_fp, uint16_t sector_id)
+{
+	SE3_FRESULT res;
+	SEFILE_SECTOR data_sector;
+	SEFILE_SECTOR encoded_data_sector;
+	UINT br;
+
+
+	if (sector_id == 0)
+		return SE3_FR_INVALID_PARAMETER;
+	if (f_tell(&(se_fp->fp)) != SE3_FILE_SECTOR_SIZE*sector_id)
+	{
+		if ((res = f_lseek(&(se_fp->fp), SE3_FILE_SECTOR_SIZE*sector_id)))
+			return res;
+	}
+
+	if ((res = f_read(&(se_fp->fp), encoded_data_sector.data, SE3_FILE_SECTOR_SIZE, &br)))
+		return res;
+
+	if (br < SE3_FILE_SECTOR_SIZE)
+		return SE3_FR_DATA_ENC_ERROR;
+
+	if ((res = crypt_sector(encoded_data_sector.data, data_sector.data, se_fp->algo, se_fp->keyID, se_fp->IV, SE3_DIR_DECRYPT)))
+		return res;
+
+	memcpy(se_fp->decrypt_buffer, data_sector.data, SEFILE_LOGIC_DATA);
+	se_fp->decrypt_buffer_size = data_sector.len;
+
+	return SE3_FR_OK;
+}
+
+static
+SE3_FRESULT crypt_sector(uint8_t* input_data, uint8_t* output_data, uint16_t algo, uint32_t keyID, uint8_t* IV, uint16_t direction)
+{
+	SE3_FRESULT res;
+	uint32_t sid;
+
+	if ( (res = initialise_crypto_context(algo, keyID, SE3_FEEDBACK_CTR | direction, &sid)))
+		return res;
+
+	if ((res = set_IV(sid, IV, SEFILE_IV_LEN)))
+		return res;
+
+
+	if ((res = execute_crypto_sector(sid, input_data, output_data)))
+		return res;
+
+	if (direction == SE3_DIR_DECRYPT)
+	{
+		if (memcmp(input_data+SE3_SECTOR_ENCRYPTED_DATA_SIZE, output_data+SE3_SECTOR_ENCRYPTED_DATA_SIZE, SIGNATURE_LEN))
+			return SE3_FR_INVALID_SIGNATURE;
+	}
+
+	return SE3_FR_OK;
+}
+
+static
+SE3_FRESULT set_IV(uint32_t sid, uint8_t* IV, uint16_t IV_len)
+{
+	uint16_t flags = SE3_CRYPTO_FLAG_RESET;
+
+	uint8_t request[SE3_CRYPTO_MAX_DATAIN];
+	uint8_t response[SE3_CRYPTO_MAX_DATAOUT];
+	uint16_t response_size = 0;
+	uint16_t request_size = 0;
+
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_SID, &sid, 4);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_FLAGS, &flags, 2);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATAIN1_LEN, &IV_len, 2);
+	memset(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATAIN2_LEN, 0, 2);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATA, IV, IV_len);
+
+	request_size = 4 + 2 + 2 + IV_len;
+
+	if((crypto_update(request_size, request, &response_size, response)) != SE3_OK){
+		return SE3_FR_CYPHER_ERROR;
+		}
+
+	return SE3_FR_OK;
+}
+
+static
+SE3_FRESULT execute_crypto_sector(uint32_t sid, uint8_t* input_data, uint8_t* output_data)
+{
+	uint16_t flags = SE3_CRYPTO_FLAG_FINIT | SE3_CRYPTO_FLAG_AUTH;
+
+
+	size_t datain_len = SE3_SECTOR_ENCRYPTED_DATA_SIZE;
+
+	uint8_t request[SE3_CRYPTO_MAX_DATAIN];
+	uint8_t response[SE3_CRYPTO_MAX_DATAOUT];
+	uint16_t response_size = 0;
+	uint16_t request_size = 0;
+
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_SID, &sid, 4);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_FLAGS, &flags, 2);
+	memset(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATAIN1_LEN, 0, 2);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATAIN2_LEN, &datain_len, 2);
+	memcpy(request+SE3_CMD1_CRYPTO_UPDATE_REQ_OFF_DATA, input_data, datain_len);
+
+	request_size = 4 + 2 + 2 + datain_len;
+
+	if((crypto_update(request_size, request, &response_size, response)) != SE3_OK){
+		return SE3_FR_CYPHER_ERROR;
+	}
+
+	memcpy(((uint8_t*)output_data), ((uint8_t*)response) + SE3_CMD1_CRYPTO_UPDATE_RESP_OFF_DATA, response_size-SE3_CMD1_CRYPTO_UPDATE_RESP_OFF_DATA); //copy response data
 
 	return SE3_FR_OK;
 }

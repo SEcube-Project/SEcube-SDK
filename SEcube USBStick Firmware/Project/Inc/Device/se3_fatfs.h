@@ -20,6 +20,7 @@ typedef struct
 	uint32_t keyID;
 	uint16_t algo;
 	uint8_t decrypt_buffer[SEFILE_LOGIC_DATA];
+	uint16_t decrypt_buffer_size;
 	uint8_t* pointer;
 	uint8_t IV[SEFILE_IV_LEN];
 } SE3_FIL;
@@ -53,6 +54,7 @@ typedef enum {
 	SE3_FR_INVALID_ALGO,
 	SE3_FR_FILENAME_ENC_ERROR,
 	SE3_FR_HEADER_ENC_ERROR,
+	SE3_FR_DATA_ENC_ERROR,
 	SE3_FR_CYPHER_ERROR,
 	SE3_FR_INVALID_SIGNATURE
 } SE3_FRESULT;
