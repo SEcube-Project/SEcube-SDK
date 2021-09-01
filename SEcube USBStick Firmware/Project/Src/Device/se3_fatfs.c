@@ -376,7 +376,7 @@ SE3_FRESULT crypt_sector(uint8_t* input_data, uint8_t* output_data, uint16_t alg
 static
 SE3_FRESULT set_IV(uint32_t sid, uint8_t* IV, uint16_t IV_len)
 {
-	uint16_t flags = SE3_CRYPTO_FLAG_RESET;
+	uint16_t flags = SE3_CRYPTO_FLAG_SETIV;
 
 	uint8_t request[SE3_CRYPTO_MAX_DATAIN];
 	uint8_t response[SE3_CRYPTO_MAX_DATAOUT];
@@ -482,6 +482,7 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 		return res;
 
 	se_fp->pointer = 0;
+	memcpy(se_fp->IV, header_sector.header.nonce_ctr, SEFILE_IV_LEN);
 	se_fp->dirty_bit = false;
 
 	return SE3_FR_OK;
