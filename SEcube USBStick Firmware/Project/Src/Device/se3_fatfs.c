@@ -94,7 +94,61 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 
 SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, uint32_t *bytesRead)
 {
-	return f_read(&(se_fp->fp), dataOut, dataOut_len, (uint*) bytesRead);
+	SE3_FRESULT res;
+	uint32_t remaining_data;
+	uint32_t read_pointer;
+	uint16_t bytes_to_read;
+	uint16_t sector_offset;
+
+	read_pointer = 0;
+	remaining_data = dataOut_len;
+	sector_offset = (uint16_t) (se_fp->pointer % SEFILE_LOGIC_DATA);
+	while (remaining_data > 0)
+	{
+		if (remaining_data + sector_offset >= SEFILE_LOGIC_DATA && se_fp->decrypt_buffer_size == SEFILE_LOGIC_DATA)
+		{
+			bytes_to_read = SEFILE_LOGIC_DATA - sector_offset;
+
+			//Fill all the available space in the buffer
+			memcpy(dataOut + read_pointer, se_fp->decrypt_buffer + sector_offset,  bytes_to_read);
+			if(se_fp->dirty_bit)
+			{
+				if ((res = write_sector(se_fp, se_fp->pointer/SEFILE_LOGIC_DATA +1)))
+					return res;
+			}
+
+			se_fp->pointer += bytes_to_read;
+			read_pointer += bytes_to_read;
+			remaining_data -= bytes_to_read;
+			sector_offset = 0;
+			se_fp->dirty_bit = false;
+			if (!f_eof(&(se_fp->fp)))
+			{
+				if ((res = read_sector(se_fp, se_fp->pointer/SEFILE_LOGIC_DATA +1)))
+					return res;
+			} else
+			{
+				se_fp->decrypt_buffer_size = 0;
+			}
+
+		}
+		else
+		{
+			if (remaining_data <= se_fp->decrypt_buffer_size - sector_offset)
+				bytes_to_read = remaining_data;
+			else
+				bytes_to_read = se_fp->decrypt_buffer_size - sector_offset;
+
+			memcpy(dataOut + read_pointer, se_fp->decrypt_buffer + sector_offset,  bytes_to_read);
+			read_pointer += bytes_to_read;
+			se_fp->pointer += bytes_to_read;
+			remaining_data = 0;
+			*bytesRead = read_pointer;
+		}
+
+	}
+
+	return SE3_FR_OK;
 }
 
 SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
@@ -117,7 +171,8 @@ SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
 			//Fill all the available space in the buffer
 			memcpy(se_fp->decrypt_buffer + sector_offset, dataIn + write_pointer, byte_to_write);
 			se_fp->decrypt_buffer_size = SEFILE_LOGIC_DATA;
-			write_sector(se_fp, se_fp->pointer/SEFILE_LOGIC_DATA +1);
+			if ((res = write_sector(se_fp, se_fp->pointer/SEFILE_LOGIC_DATA +1)))
+				return res;
 
 			se_fp->pointer += byte_to_write;
 			write_pointer += byte_to_write;
