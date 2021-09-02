@@ -14,9 +14,7 @@ Authors: D. Stochino, M. Meloni
 - [Functional and non functional requirements](#functional-and-non-functional-requirements)
 	+ [Functional Requirements](#functional-requirements)
 	+ [Non functional requirements](#non-functional-requirements)
-- [Use case diagram and use cases](#use-case-diagram-and-use-cases)
-	+ [Use case diagram](#use-case-diagram)
-	+ [Use cases](#use-cases)
+- [Use cases](#use-cases)
 - [Glossary](#glossary)
 - [System design](#system-design)
 
