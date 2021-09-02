@@ -57,6 +57,7 @@ static SE3_FRESULT crypt_sector(uint8_t* input_data, uint8_t* output_data, uint1
 static SE3_FRESULT execute_crypto_sector(uint32_t sid, uint8_t* input_data, uint8_t* output_data);
 static SE3_FRESULT set_IV(uint32_t sid, uint8_t* IV, uint16_t IV_len);
 static void compute_IV(uint8_t* base_IV, uint8_t* sector_IV, uint32_t sector_id);
+static void get_filesize_data(SE3_FIL* se_fp, uint32_t* filesize);
 
 SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo)
 {
@@ -93,6 +94,62 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 	se_fp->dirty_bit = false;
 
 	return SE3_FR_OK;
+}
+
+SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, uint32_t *position, uint8_t whence)
+{
+	SE3_FRESULT res;
+	uint32_t start = 0;
+	uint32_t filesize;
+	uint32_t curr_sector, end_sector;
+	uint32_t padding_len;
+	uint8_t *padding;
+
+	if(whence == SEFILE_CURRENT)
+		start = se_fp->pointer;
+
+	get_filesize_data(se_fp, &filesize);
+
+	if(whence == SEFILE_END)
+		start = filesize;
+
+	if(start + offset < 0)
+		return SE3_FR_SEEK_ERROR;
+
+	end_sector = (start + offset) / SEFILE_LOGIC_DATA + 1 ;
+	curr_sector = se_fp->pointer / SEFILE_LOGIC_DATA + 1;
+
+	if(start + offset < filesize)
+	{
+		if(curr_sector != end_sector)
+			if((res = read_sector(se_fp, end_sector)))
+				return res;
+
+		se_fp->pointer = start + offset;
+	}
+	else
+	{
+		/*
+		 * no need to read any sector here since we're already pointing
+		 * to the end of the file after calling get_filesize_data()
+		 */
+		padding_len = (start + offset) - filesize;
+
+		if ((padding = malloc(padding_len * sizeof(int))) == NULL)
+			return SE3_FR_SEEK_ALLOCATION_ERROR;
+		memset(padding, 0, padding_len);
+
+		if((res = secure_write(se_fp, padding, padding_len)))
+			return res;
+
+		if((res = write_sector(se_fp, se_fp->pointer / SEFILE_LOGIC_DATA + 1)))
+			return res;
+	}
+
+	*position = se_fp->pointer;
+
+	return SE3_FR_OK;
+
 }
 
 SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, uint32_t *bytesRead)
@@ -327,6 +384,9 @@ SE3_FRESULT read_sector(SE3_FIL* se_fp, uint32_t sector_id)
 
 	memcpy(se_fp->decrypt_buffer, data_sector.data, SEFILE_LOGIC_DATA);
 	se_fp->decrypt_buffer_size = data_sector.len;
+
+	//this is needed when accessing a sector without passing secure_read(), inside of get_filesize_data()
+	se_fp->pointer = (sector_id - 1) * SEFILE_LOGIC_DATA + data_sector.len;
 
 	return SE3_FR_OK;
 }
@@ -731,4 +791,21 @@ void get_filename(char *path, char *file_name, int maxLength)
 	{
 		strncpy(file_name, f_name + 1, maxLength);
 	}
+}
+
+static
+void get_filesize_data(SE3_FIL* se_fp, uint32_t* filesize)
+{
+	uint32_t real_file_size, data_sectors;
+
+
+	real_file_size = (uint32_t) f_size(&(se_fp->fp));
+
+	data_sectors = real_file_size / SE3_FILE_SECTOR_SIZE - 1;
+	read_sector(se_fp, data_sectors);
+	*filesize = (data_sectors - 1) * SEFILE_LOGIC_DATA + se_fp->decrypt_buffer_size;
+
+	//this is to handle the cornercase of having the last sector completely full
+	if(se_fp->decrypt_buffer_size == SEFILE_LOGIC_DATA)
+		se_fp->decrypt_buffer_size = 0;
 }

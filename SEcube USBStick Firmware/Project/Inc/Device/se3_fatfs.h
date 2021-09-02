@@ -14,6 +14,11 @@
 #define SEFILE_IV_LEN 16
 #define SEFILE_LOGIC_DATA (SE3_FILE_SECTOR_SIZE - sizeof(uint16_t) - SIGNATURE_LEN)
 
+//defines for seek options
+#define SEFILE_BEGIN 0
+#define SEFILE_END 1
+#define SEFILE_CURRENT 2
+
 typedef struct
 {
 	FIL fp;
@@ -58,14 +63,16 @@ typedef enum {
 	SE3_FR_HEADER_ENC_ERROR,
 	SE3_FR_DATA_ENC_ERROR,
 	SE3_FR_CYPHER_ERROR,
-	SE3_FR_INVALID_SIGNATURE
+	SE3_FR_INVALID_SIGNATURE,
+	SE3_FR_SEEK_ERROR,
+	SE3_FR_SEEK_ALLOCATION_ERROR
 } SE3_FRESULT;
 
 SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo);
-SE3_FRESULT secure_close(SE3_FIL* fp);
-SE3_FRESULT secure_read(SE3_FIL* fp, uint8_t *dataOut, uint32_t dataOut_len, uint32_t *bytesRead);
-SE3_FRESULT secure_write(SE3_FIL* fp, uint8_t *dataIn, uint32_t dataIn_len);
-SE3_FRESULT secure_seek(SE3_FIL* fp, int32_t offset, int32_t *position, uint8_t whence);
+SE3_FRESULT secure_close(SE3_FIL* se_fp);
+SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, uint32_t *bytesRead);
+SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len);
+SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, uint32_t *position, uint8_t whence);
 
 
 #endif /* SRC_DEVICE_SE3_FATFS_H_ */
