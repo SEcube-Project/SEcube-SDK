@@ -145,7 +145,7 @@ int main(void)
 	if (!se3_key_find(1, &f_it))
 		se3_key_new(&f_it, &key);
 
-	volatile FRESULT res;
+	volatile SE3_FRESULT res;
 	FATFS fs;
 
 	res = f_mount (&fs, "", 0);
@@ -154,20 +154,29 @@ int main(void)
 
 
 	SE3_FIL fp;
+
+	FIL fp2;
 	res = secure_open(&fp, "prova3.txt", FA_CREATE_ALWAYS | FA_WRITE, 1, SE3_ALGO_AES_HMACSHA256);
 	UINT bw;
 
-	char buff[3000] =
+	uint8_t buff[3000] =
 			"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus eu metus augue. Maecenas justo felis, mollis et erat a, viverra ullamcorper quam. Ut urna felis, tempus imperdiet ornare auctor, iaculis non sapien. Integer luctus, erat in hendrerit imperdiet, augue tellus placerat orci, ut egestas sapien ipsum non massa. Pellentesque ut laoreet erat, sit amet sagittis nisi. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Morbi sit amet nisl tincidunt ex porta sollicitudin eu vitae turpis. Vestibulum ut blandit dui. Nunc eu diam maximus, imperdiet nulla sodales, ultrices enim.Mauris ornare eros elementum arcu viverra hendrerit. Vestibulum urna ligula, auctor a dapibus id, tincidunt ut nunc. Aliquam non dolor ligula. Mauris maximus lorem diam, vitae dignissim ante lobortis a. Quisque sollicitudin lorem vitae sapien tincidunt, quis luctus lorem tincidunt. Integer dolor enim, viverra vitae pharetra sit amet, porttitor eu urna. Nullam vel laoreet ipsum, nec fringilla orci. Phasellus convallis malesuada nulla, quis sagittis sapien tincidunt a. Nunc at sagittis dui, sed blandit ante.Donec interdum nisi et pellentesque lacinia. Vestibulum ultricies ultrices erat in luctus. Maecenas nec turpis sit amet ex posuere feugiat. Donec sed bibendum nulla. Ut eu nunc bibendum, interdum massa tempus, ornare lorem. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Integer augue magna, pulvinar vel metus sed, blandit finibus elit.Integer tincidunt neque in blandit cursus. Donec eu vestibulum dolor. Etiam consectetur eros nulla, faucibus malesuada libero aliquam ut. Nam est ligula, porta sit amet porttitor vitae, varius non neque. Duis gravida sed orci at pellentesque. Donec lectus ligula, pellentesque nec erat rhoncus, cursus tincidunt massa. Etiam commodo luctus quam, auctor vulputate massa sodales in. Vestibulum ac suscipit sapien, a viverra mi.Nam eu metus magna. Duis mollis turpis ante. Interdum et malesuada fames ac ante ipsum primis in faucibus. Praesent eget sem a odio dapibus mattis vitae a nisl. Donec a lorem ante. Aliquam quis accumsan neque, id vulputate est. Morbi sit amet ante aliquet, viverra lacus et, posuere nisl. Suspendisse eu mauris tellus.Suspendisse sed quam nec nulla blandit molestie sit amet in ligula. Pellentesque venenatis dapibus lectus. ";
-	volatile char buffOut[3000];
+	uint8_t buffOut[3000];
 	memset(buffOut, 0, 3000);
-	volatile bytesRead;
+	uint32_t bytesRead;
 
-	secure_write(&fp, (void *) buff, 2367);
+	secure_write(&fp, (void *) buff, 2*478);
 	secure_close(&fp);
 
 	res = secure_open(&fp, "prova3.txt", FA_READ, 1, SE3_ALGO_AES_HMACSHA256);
-	res = secure_read(&fp, buffOut, 1200, &bytesRead);
+	res = secure_read(&fp, buffOut, 1000, &bytesRead);
+	res = secure_close(&fp);
+
+	res = f_open(&fp2, "output.txt", FA_CREATE_ALWAYS | FA_WRITE);
+	res = f_write(&fp2, buffOut, bytesRead, NULL);
+	res = f_close(&fp2);
+
+
 
 	device_loop();
 	/* USER CODE END  */

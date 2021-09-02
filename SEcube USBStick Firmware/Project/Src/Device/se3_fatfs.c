@@ -89,6 +89,9 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 		se_fp->decrypt_buffer_size = 0;
 	}
 
+	se_fp->pointer = 0;
+	se_fp->dirty_bit = false;
+
 	return SE3_FR_OK;
 }
 
@@ -143,10 +146,11 @@ SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, 
 			read_pointer += bytes_to_read;
 			se_fp->pointer += bytes_to_read;
 			remaining_data = 0;
-			*bytesRead = read_pointer;
 		}
 
 	}
+
+	*bytesRead = read_pointer;
 
 	return SE3_FR_OK;
 }
@@ -208,7 +212,7 @@ SE3_FRESULT secure_close(SE3_FIL* se_fp)
 {
 	SE3_FRESULT res;
 
-	if (se_fp->decrypt_buffer_size > 0 )
+	if (se_fp->decrypt_buffer_size > 0 && se_fp->dirty_bit)
 	{
 		if (se_fp->decrypt_buffer_size < SEFILE_LOGIC_DATA)
 		{
@@ -251,9 +255,6 @@ SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode)
 		return res;
 
 	memcpy(se_fp->IV, header_sector.header.nonce_ctr, SEFILE_IV_LEN);
-
-	se_fp->pointer = 0;
-	se_fp->dirty_bit = false;
 
 
 	return SE3_FR_OK;
@@ -481,9 +482,8 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 	if ((res = f_write(&(se_fp->fp), encoded_header_sector, SE3_FILE_SECTOR_SIZE, NULL)))
 		return res;
 
-	se_fp->pointer = 0;
 	memcpy(se_fp->IV, header_sector.header.nonce_ctr, SEFILE_IV_LEN);
-	se_fp->dirty_bit = false;
+
 
 	return SE3_FR_OK;
 }
