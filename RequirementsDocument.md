@@ -14,12 +14,9 @@ Authors: D. Stochino, M. Meloni
 - [Functional and non functional requirements](#functional-and-non-functional-requirements)
 	+ [Functional Requirements](#functional-requirements)
 	+ [Non functional requirements](#non-functional-requirements)
-- [Use case diagram and use cases](#use-case-diagram-and-use-cases)
-	+ [Use case diagram](#use-case-diagram)
-	+ [Use cases](#use-cases)
+- [Use cases](#use-cases)
 - [Glossary](#glossary)
 - [System design](#system-design)
-- [Deployment diagram](#deployment-diagram)
 
 
 # Stakeholders
@@ -76,7 +73,7 @@ Nico, a SECube firmware developer, wants to store a large database of keys insid
 ## Non Functional Requirements
 
 
-| ID        | Type (efficiency, reliability, ..)           | Description  | Refers to |
+| ID        | Type        | Description  | Refers to |
 | ------------- |:-------------:| :-----:| -----:|
 |  NFR1     |Security |-  |All FR |  
 |  NFR1.1     |Confidentiality |Secure files must be accessible only by the SECube that contains the corresponding key |All FR |
@@ -84,6 +81,44 @@ Nico, a SECube firmware developer, wants to store a large database of keys insid
 |  NFR2		|Usability| A developer which knows how to use fat_fs shall be able to use SEfat_fs with no training| All FR |
 
 
+## Use cases
+
+### Use case 1, UC1 - FR1.1 Open existing file
+
+| Actors Involved        | User, SDcard |
+| ------------- |:-------------:|
+|  Precondition     | Secure file SF exists in SDcard|  
+|  Post condition     | File SF is ready to be read/written|
+|  Nominal Scenario     | The user U uses the API secure_open specifying the path of the file and the opening mode|
+|  Variants     |File SF does not exists in SDcard, return error <br /> File SF has been illecitly modified, return error|
+
+### Use case 2, UC2 - FR1.2 Create a new file
+
+| Actors Involved        | User, SDcard |
+| ------------- |:-------------:|
+|  Precondition     | Secure file SF does not exists in SDcard. Key K and algorithm exist in SECube|  
+|  Post condition     | File SF is ready to be read/written|
+|  Nominal Scenario     | The user U uses the API secure_open specifying the path of the file, the opening mode, the key K and the algorithm A|
+|  Variants     |File SF already exists in SDcard, return error <br />File SF already exists in SDcard, but user specified to overwrite it, return OK <br /> The key K or the algorithm A do not exist inside SECube, return error|
+
+### Use case 3, UC3 - FR2 Write data inside an open file
+
+| Actors Involved        | User, SDcard |
+| ------------- |:-------------:|
+|  Precondition     | Secure file SF is open|  
+|  Post condition     | The modifications appllied to SF are written on the SDcard|
+|  Nominal Scenario     | The user U uses the API secure_write to write data in the file SF buffer <br/> The user U uses the API secure_close to write all the pending modifications in the SDcard |
+|  Variants     |File SF is not open in write mode, return error <br />The user U uses API secure_seek in order to write at a specific location of the file SF|
+
+
+### Use case 4, UC4 - FR3 Read data from an open file
+
+| Actors Involved        | User, SDcard |
+| ------------- |:-------------:|
+|  Precondition     | Secure file SF is open|  
+|  Post condition     | Data are read by the User U|
+|  Nominal Scenario     | The user U uses the API secure_read to read data from the file SF |
+|  Variants     |File SF is not open in read mode, return error <br />The user U uses API secure_seek in order to read from a specific location of the file SF|
 
 
 # Glossary
