@@ -165,7 +165,7 @@ int main(void)
 	memset(buffOut, 1, 3000);
 	uint32_t bytesRead, position;
 
-	secure_write(&fp, (void *) buff, 2*478);
+	secure_write(&fp, (void *) buff, 2*478+40);
 	secure_close(&fp);
 
 	res = secure_open(&fp, "prova3.txt", FA_READ, 1, SE3_ALGO_AES_HMACSHA256);
