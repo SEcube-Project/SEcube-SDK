@@ -58,6 +58,7 @@ static SE3_FRESULT execute_crypto_sector(uint32_t sid, uint8_t* input_data, uint
 static SE3_FRESULT set_IV(uint32_t sid, uint8_t* IV, uint16_t IV_len);
 static void compute_IV(uint8_t* base_IV, uint8_t* sector_IV, uint32_t sector_id);
 static void get_filesize(SE3_FIL* se_fp, uint32_t* filesize);
+static bool key_exists(uint32_t keyID);
 
 SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo)
 {
@@ -527,6 +528,11 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 	//The first sector contains the header only
 	SEFILE_SECTOR header_sector;
 
+	if (!key_exists(se_fp->keyID))
+		return SE3_FR_NO_KEY;
+	if (se_fp->algo > SE3_ALGO_MAX)
+		return SE3_FR_INVALID_ALGO;
+
 	uint8_t encoded_header_sector[sizeof(SEFILE_SECTOR)];
 
 	res = crypto_filename(path, enc_name_path, &encoded_name_length);
@@ -678,22 +684,16 @@ SE3_FRESULT execute_crypto_header(uint32_t sid, uint8_t* input_data, uint8_t* ou
 
 
 
-/*static
-bool find_and_read_key(uint32_t keyID, se3_fatfs_key* key)
+static
+bool key_exists(uint32_t keyID)
 {
 	se3_flash_it iterator;
-	se3_flash_key flashKey;
-
-	flashKey.data = key->data;
-	memset(flashKey.data, 0, SE3_FATFS_KEY_SIZE);
 
 	if (!se3_key_find(keyID, &iterator))
 		return false;
 
-	se3_key_read(&iterator, &flashKey);
-
 	return true;
-}*/
+}
 
 static
 SE3_FRESULT crypto_filename(char *path, char *enc_name_path,

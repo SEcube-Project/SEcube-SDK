@@ -58,6 +58,7 @@
 #include "se3_core.h"
 #include "fatfs.h"
 #include "se3_fatfs.h"
+#include "se3_fatfs_test.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -132,8 +133,9 @@ int main(void)
 	/* USER CODE BEGIN */
 	device_init();
 
+	begin_test();
 
-	se3_flash_it f_it;
+	/*se3_flash_it f_it;
 	se3_flash_key key;
 
 	uint8_t keyData[] = "pro123vapro123va";
@@ -186,7 +188,7 @@ int main(void)
 	res = f_open(&fp2, "output2.txt", FA_CREATE_ALWAYS | FA_WRITE);
 	res = f_write(&fp2, buffOut, bytesRead, NULL);
 	res = f_close(&fp2);
-
+	*/
 
 	device_loop();
 	/* USER CODE END  */
