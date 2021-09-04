@@ -58,7 +58,7 @@ static SE3_FRESULT crypt_sector(uint8_t* input_data, uint8_t* output_data, uint1
 static SE3_FRESULT execute_crypto_sector(uint32_t sid, uint8_t* input_data, uint8_t* output_data);
 static SE3_FRESULT set_IV(uint32_t sid, uint8_t* IV, uint16_t IV_len);
 static void compute_IV(uint8_t* base_IV, uint8_t* sector_IV, uint32_t sector_id);
-static void get_filesize(SE3_FIL* se_fp, uint32_t* filesize);
+static SE3_FRESULT get_filesize(SE3_FIL* se_fp, uint32_t* filesize);
 static bool key_exists(uint32_t keyID);
 
 SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo)
@@ -112,7 +112,9 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, uint32_t *position, uint
 	if(whence == SEFILE_CURRENT)
 		start = se_fp->pointer;
 
-	get_filesize(se_fp, &filesize);
+	if ((res = get_filesize(se_fp, &filesize)))
+		return res;
+
 	if(whence == SEFILE_END)
 	{
 		start = filesize;
@@ -824,16 +826,18 @@ void get_filename(char *path, char *file_name, int maxLength)
 }
 
 static
-void get_filesize(SE3_FIL* se_fp, uint32_t* filesize)
+SE3_FRESULT get_filesize(SE3_FIL* se_fp, uint32_t* filesize)
 {
 	uint32_t real_file_size, data_sectors;
 	uint16_t last_sector_size;
-
+	SE3_FRESULT res;
 
 	real_file_size = (uint32_t) f_size(&(se_fp->fp));
 
 	data_sectors = real_file_size / SE3_FILE_SECTOR_SIZE - 1;
-	read_sector(se_fp, data_sectors, NULL, &last_sector_size);
+	if (( res = read_sector(se_fp, data_sectors, NULL, &last_sector_size)))
+		return res;
 	*filesize = (data_sectors - 1) * SEFILE_LOGIC_DATA + last_sector_size;
 
+	return SE3_FR_OK;
 }
