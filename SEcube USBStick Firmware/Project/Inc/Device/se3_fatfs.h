@@ -19,6 +19,8 @@
 #define SEFILE_END 1
 #define SEFILE_CURRENT 2
 
+
+
 typedef struct
 {
 	FIL fp;

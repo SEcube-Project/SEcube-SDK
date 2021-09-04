@@ -1,7 +1,8 @@
 #include "se3_fatfs.h"
 #include "se3_rand.h"
 
-
+#define end_of_last_sector(se_fp) ((se_fp->pointer) == (f_size(&(se_fp->fp))/SE3_FILE_SECTOR_SIZE-1)*SEFILE_LOGIC_DATA)
+#define get_current_sector(se_fp) ((se_fp)->pointer/SEFILE_LOGIC_DATA + 1)
 
 #pragma pack(push,1) //These are a physical structures, thus we don't want to allow
 					// the compiler to insert padding for memory alignment
@@ -82,7 +83,10 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 			return res;
 	}
 
-	if (!f_eof(&(se_fp->fp)))
+	se_fp->pointer = 0;
+	se_fp->dirty_bit = false;
+
+	if (!end_of_last_sector(se_fp))
 	{
 		if ((res = read_sector(se_fp, 1, se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size)))
 			return res;
@@ -91,8 +95,7 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 		se_fp->decrypt_buffer_size = 0;
 	}
 
-	se_fp->pointer = 0;
-	se_fp->dirty_bit = false;
+
 
 	return SE3_FR_OK;
 }
@@ -103,16 +106,15 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, uint32_t *position, uint
 	uint32_t start = 0, req_position;
 	uint32_t filesize;
 	uint32_t curr_sector, end_sector;
-	uint32_t padding_len;
-	uint8_t *padding;
+	//uint32_t padding_len;
+	//uint8_t *padding;
 
 	if(whence == SEFILE_CURRENT)
 		start = se_fp->pointer;
 
-
+	get_filesize(se_fp, &filesize);
 	if(whence == SEFILE_END)
 	{
-		get_filesize(se_fp, &filesize);
 		start = filesize;
 	}
 
@@ -131,21 +133,25 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, uint32_t *position, uint
 
 	if(curr_sector != end_sector)
 	{
-		if (se_fp->dirty_bit)
+		if (se_fp->decrypt_buffer_size > 0 && se_fp->dirty_bit)
 		{
-			if ((res = write_sector(se_fp, se_fp->pointer/SEFILE_LOGIC_DATA +1)))
-				return res;
-		}
-
-		if (req_position == filesize && filesize % SEFILE_LOGIC_DATA == 0)
-			se_fp -> decrypt_buffer_size = 0;
-		else
-		{
-			if((res = read_sector(se_fp, end_sector, se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size)))
-				return res;
+			if (se_fp->decrypt_buffer_size < SEFILE_LOGIC_DATA)
+			{
+				se3_rand(SEFILE_LOGIC_DATA-se_fp->decrypt_buffer_size, se_fp->decrypt_buffer + se_fp->decrypt_buffer_size);
+			}
+			write_sector(se_fp, get_current_sector(se_fp));
 		}
 	}
 	se_fp->pointer = req_position;
+
+	if (end_of_last_sector(se_fp))
+		se_fp -> decrypt_buffer_size = 0;
+	else
+	{
+		if((res = read_sector(se_fp, end_sector, se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size)))
+			return res;
+	}
+
 
 	/*if(req_position <= filesize)
 	{
@@ -194,7 +200,7 @@ SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, 
 			memcpy(dataOut + read_pointer, se_fp->decrypt_buffer + sector_offset,  bytes_to_read);
 			if(se_fp->dirty_bit)
 			{
-				if ((res = write_sector(se_fp, se_fp->pointer/SEFILE_LOGIC_DATA +1)))
+				if ((res = write_sector(se_fp, get_current_sector(se_fp))))
 					return res;
 			}
 
@@ -203,13 +209,14 @@ SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, 
 			remaining_data -= bytes_to_read;
 			sector_offset = 0;
 			se_fp->dirty_bit = false;
-			if (!f_eof(&(se_fp->fp)))
+			//If not reachead the end of file (and last sector) load the next sector
+			if (!end_of_last_sector(se_fp))
 			{
 				if ((res = read_sector(se_fp,
 						se_fp->pointer / SEFILE_LOGIC_DATA + 1,
 						se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size)))
 					return res;
-			} else
+			} else //Otherwise create a new empty sector
 			{
 				se_fp->decrypt_buffer_size = 0;
 			}
@@ -255,7 +262,7 @@ SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
 			//Fill all the available space in the buffer
 			memcpy(se_fp->decrypt_buffer + sector_offset, dataIn + write_pointer, byte_to_write);
 			se_fp->decrypt_buffer_size = SEFILE_LOGIC_DATA;
-			if ((res = write_sector(se_fp, se_fp->pointer/SEFILE_LOGIC_DATA +1)))
+			if ((res = write_sector(se_fp, get_current_sector(se_fp))))
 				return res;
 
 			se_fp->pointer += byte_to_write;
@@ -263,7 +270,7 @@ SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
 			remaining_data -= byte_to_write;
 			sector_offset = 0;
 			se_fp->dirty_bit = false;
-			if (!f_eof(&(se_fp->fp)))
+			if (!end_of_last_sector(se_fp))
 			{
 				if ((res = read_sector(se_fp,
 						se_fp->pointer / SEFILE_LOGIC_DATA + 1,
@@ -300,7 +307,7 @@ SE3_FRESULT secure_close(SE3_FIL* se_fp)
 		{
 			se3_rand(SEFILE_LOGIC_DATA-se_fp->decrypt_buffer_size, se_fp->decrypt_buffer + se_fp->decrypt_buffer_size);
 		}
-		write_sector(se_fp, se_fp->pointer/SEFILE_LOGIC_DATA + 1);
+		write_sector(se_fp, get_current_sector(se_fp));
 	}
 
 	if ( (res = f_close(&(se_fp->fp)) ) )
