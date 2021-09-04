@@ -334,17 +334,29 @@ SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode)
 	if ((res = f_open(&(se_fp->fp), enc_name_path, mode)))
 		return res;
 
+	if (f_size(&se_fp->fp)%SE3_FILE_SECTOR_SIZE != 0)
+	{
+		f_close(&se_fp->fp);
+		return SE3_FR_DATA_ENC_ERROR;
+	}
+
 	if((res = f_read(&(se_fp->fp), encoded_header_sector.data, sizeof(SEFILE_SECTOR), &br)))
+	{
+		f_close(&se_fp->fp);
 		return res;
-
+	}
 	if (br < sizeof(SEFILE_SECTOR))
+	{
+		f_close(&se_fp->fp);
 		return SE3_FR_HEADER_ENC_ERROR;
-
+	}
 	se_fp->algo = encoded_header_sector.header.algorithm;
 	se_fp->keyID =  encoded_header_sector.header.key_id;
 	if ((res = crypt_header(encoded_header_sector.data, header_sector.data, se_fp->algo, se_fp->keyID, SE3_DIR_DECRYPT)))
+	{
+		f_close(&se_fp->fp);
 		return res;
-
+	}
 	memcpy(se_fp->IV, header_sector.header.nonce_ctr, SEFILE_IV_LEN);
 
 
