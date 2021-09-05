@@ -60,11 +60,14 @@ static SE3_FRESULT set_IV(uint32_t sid, uint8_t* IV, uint16_t IV_len);
 static void compute_IV(uint8_t* base_IV, uint8_t* sector_IV, uint32_t sector_id);
 static SE3_FRESULT get_filesize(SE3_FIL* se_fp, uint32_t* filesize);
 static bool key_exists(uint32_t keyID);
+static bool validate_file_object(SE3_FIL* se_fp);
 
 SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo)
 {
 	SE3_FRESULT res;
 
+	if (se_fp == NULL)
+		return SE3_FR_INVALID_OBJECT;
 
 	se_fp->mode = mode;
 
@@ -108,6 +111,9 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, uint32_t *position, uint
 	uint32_t curr_sector, end_sector;
 	//uint32_t padding_len;
 	//uint8_t *padding;
+
+	if (!validate_file_object(se_fp))
+			return SE3_FR_INVALID_OBJECT;
 
 	if(whence == SEFILE_CURRENT)
 		start = se_fp->pointer;
@@ -189,6 +195,9 @@ SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, 
 	uint16_t bytes_to_read;
 	uint16_t sector_offset;
 
+	if (!validate_file_object(se_fp))
+		return SE3_FR_INVALID_OBJECT;
+
 	read_pointer = 0;
 	remaining_data = dataOut_len;
 	sector_offset = (uint16_t) (se_fp->pointer % SEFILE_LOGIC_DATA);
@@ -252,6 +261,9 @@ SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
 	uint16_t byte_to_write;
 	uint16_t sector_offset;
 
+	if (!validate_file_object(se_fp))
+			return SE3_FR_INVALID_OBJECT;
+
 	write_pointer = 0;
 	remaining_data = dataIn_len;
 	sector_offset = (uint16_t) (se_fp->pointer % SEFILE_LOGIC_DATA);
@@ -302,6 +314,9 @@ SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
 SE3_FRESULT secure_close(SE3_FIL* se_fp)
 {
 	SE3_FRESULT res;
+
+	if (!validate_file_object(se_fp))
+			return SE3_FR_INVALID_OBJECT;
 
 	if (se_fp->decrypt_buffer_size > 0 && se_fp->dirty_bit)
 	{
@@ -852,4 +867,27 @@ SE3_FRESULT get_filesize(SE3_FIL* se_fp, uint32_t* filesize)
 	*filesize = (data_sectors - 1) * SEFILE_LOGIC_DATA + last_sector_size;
 
 	return SE3_FR_OK;
+}
+
+static
+bool validate_file_object(SE3_FIL* se_fp)
+{
+	if (se_fp == NULL)
+		return false;
+
+	if (se_fp->algo > SE3_ALGO_MAX)
+		return false;
+
+	if (se_fp->decrypt_buffer_size > SEFILE_LOGIC_DATA)
+		return false;
+
+	if (se_fp->dirty_bit != false && se_fp->dirty_bit != true)
+		return false;
+
+	//force verification of file pointer
+/*	if (f_lseek(&se_fp->fp, f_tell(&se_fp->fp)))
+			return false;
+*/
+
+	return true;
 }
