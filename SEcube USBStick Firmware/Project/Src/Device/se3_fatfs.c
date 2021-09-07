@@ -339,7 +339,7 @@ SE3_FRESULT secure_close(SE3_FIL* se_fp)
 		write_sector(se_fp, get_current_sector(se_fp));
 	}
 
-	if ( (res = f_close(&(se_fp->fp)) ) )
+	if ( (res = (SE3_FRESULT) f_close(&(se_fp->fp)) ) )
 			return res;
 
 	return SE3_FR_OK;
@@ -358,7 +358,7 @@ SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode)
 	if ((res = crypto_filename(path, enc_name_path, &encoded_name_length)))
 		return res;
 
-	if ((res = f_open(&(se_fp->fp), enc_name_path, mode)))
+	if ((res = (SE3_FRESULT) f_open(&(se_fp->fp), enc_name_path, mode)))
 		return res;
 
 	if (f_size(&se_fp->fp)%SE3_FATFS_SECTOR_SIZE != 0)
@@ -367,7 +367,7 @@ SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode)
 		return SE3_FR_DATA_ENC_ERROR;
 	}
 
-	if((res = f_read(&(se_fp->fp), encoded_header_sector.data, sizeof(SE3_FATFS_SECTOR), &br)))
+	if((res = (SE3_FRESULT) f_read(&(se_fp->fp), encoded_header_sector.data, sizeof(SE3_FATFS_SECTOR), &br)))
 	{
 		f_close(&se_fp->fp);
 		return res;
@@ -405,7 +405,7 @@ SE3_FRESULT write_sector(SE3_FIL* se_fp, uint32_t sector_id)
 		return SE3_FR_INVALID_PARAMETER;
 	if (f_tell(&(se_fp->fp)) != SE3_FATFS_SECTOR_SIZE*sector_id)
 	{
-		if ((res = f_lseek(&(se_fp->fp), SE3_FATFS_SECTOR_SIZE*sector_id)))
+		if ((res = (SE3_FRESULT) f_lseek(&(se_fp->fp), SE3_FATFS_SECTOR_SIZE*sector_id)))
 			return res;
 	}
 
@@ -417,7 +417,7 @@ SE3_FRESULT write_sector(SE3_FIL* se_fp, uint32_t sector_id)
 	if ((res = crypt_sector(data_sector.data, encoded_data_sector.data, se_fp->algo, se_fp->keyID, sector_IV, SE3_DIR_ENCRYPT)))
 		return res;
 
-	if ((res = f_write(&(se_fp->fp), encoded_data_sector.data, SE3_FATFS_SECTOR_SIZE, NULL)))
+	if ((res = (SE3_FRESULT) f_write(&(se_fp->fp), encoded_data_sector.data, SE3_FATFS_SECTOR_SIZE, NULL)))
 		return res;
 
 	return SE3_FR_OK;
@@ -440,11 +440,11 @@ SE3_FRESULT read_sector(SE3_FIL* se_fp, uint32_t sector_id, uint8_t* data, uint1
 		return SE3_FR_INT_ERR;
 	if (f_tell(&(se_fp->fp)) != SE3_FATFS_SECTOR_SIZE*sector_id)
 	{
-		if ((res = f_lseek(&(se_fp->fp), SE3_FATFS_SECTOR_SIZE*sector_id)))
+		if ((res = (SE3_FRESULT) f_lseek(&(se_fp->fp), SE3_FATFS_SECTOR_SIZE*sector_id)))
 			return res;
 	}
 
-	if ((res = f_read(&(se_fp->fp), encoded_data_sector.data, SE3_FATFS_SECTOR_SIZE, &br)))
+	if ((res = (SE3_FRESULT) f_read(&(se_fp->fp), encoded_data_sector.data, SE3_FATFS_SECTOR_SIZE, &br)))
 		return res;
 
 	if (br < SE3_FATFS_SECTOR_SIZE)
@@ -587,7 +587,7 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 		if (res != SE3_FR_OK)
 			return res;
 
-	res = f_open(&(se_fp->fp), enc_name_path, mode);
+	res = (SE3_FRESULT) f_open(&(se_fp->fp), enc_name_path, mode);
 	if (res != SE3_FR_OK)
 		return res;
 
@@ -616,7 +616,7 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 	if ( (res = crypt_header(header_sector.data, encoded_header_sector, se_fp->algo, se_fp->keyID, SE3_DIR_ENCRYPT) ))
 		return res;
 
-	if ((res = f_write(&(se_fp->fp), encoded_header_sector, SE3_FATFS_SECTOR_SIZE, NULL)))
+	if ((res = (SE3_FRESULT) f_write(&(se_fp->fp), encoded_header_sector, SE3_FATFS_SECTOR_SIZE, NULL)))
 		return res;
 
 	memcpy(se_fp->IV, header_sector.header.nonce_ctr, SE3_FATFS_IV_LEN);
