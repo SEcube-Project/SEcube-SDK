@@ -17,6 +17,7 @@ Authors: D. Stochino, M. Meloni
 - [Use cases](#use-cases)
 - [Glossary](#glossary)
 - [System design](#system-design)
+- [APIs](#apis)
 
 
 # Stakeholders
@@ -170,16 +171,114 @@ package "SECube" {
 ```
 
 # APIs
-	SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo);
+- [secure_open](#secure_open)
+- [secure_close](#secure_close)
+- [secure_read](#secure_read)
+- [secure_write](#secure_write)
+- [secure_seek](#secure_seek)
 
-	SE3_FRESULT secure_close(SE3_FIL* se_fp);
+TODO
+- [secure_mkdir](#directory-management)
+- [secure_opendir](#directory-management)
+- [secure_readdir](#directory-management)
+- [secure_closedir](#directory-management)
 
-	SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, uint32_t *bytesRead);
+### secure_open
+The secure_open function opens a file
 
-	SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len);
+	SE3_FRESULT secure_open(
+		SE3_FIL* se_fp, 
+		char *path, 
+		BYTE mode, 
+		uint32_t keyID, 
+		uint16_t algo
+	);
 
-	SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, int32_t *position, uint8_t whence);
+| | |
+| ------- | ---------------------- |
+| *se_fp* | Pointer to the blank file object structure |
+| *path*  | Pointer to the null-terminated string that specifies the file name to open or create| 
+| *mode* | Mode flags that specifies the type of access and open method for the file (see FatFs) |
+| *keyID* | The ID of the key to be used for encryption |
+| *algo* | The ID of the algorithm to be used for encryption |
 
+##### Description
+The secure_open function opens a file and creates a file object. The file object is used for subsequent read/write operations to the file to identify the file (as for FatFs *f_open*).
+*keyID* and *algo* are needed during file creation only. If an exisiting file is going to be open, they are ignored, since the parameters used during file creation will be retrieved automatically by SEFatFs.
+It returns an error if some illicit modification are detected in the header sector, or if the size of the file is not the expected one, i.e. not a multiple of the sector size. (More about sector organization in the report)
+
+### secure_close
+The secure_close function closes a file
+
+	SE3_FRESULT secure_close(
+		SE3_FIL* se_fp
+	);
+| | |
+| ------- | ---------------------- |
+| *se_fp* | Pointer to the open file object structure to be closed|
+
+##### Description
+The secure_close function closes an open file object. If the file has been changed, the cached information of the file is written back to the volume. After the function succeeded, the file object is no longer valid and it can be discarded.
+
+### secure_read
+The secure_read function reads data from a file.
+
+	SE3_FRESULT secure_read(
+		SE3_FIL* se_fp, 
+		uint8_t *dataOut, 
+		uint32_t dataOut_len, 
+		uint32_t *bytesRead
+	);
+
+| | |
+| ------- | ---------------------- |
+| *se_fp* | Pointer to the open file object structure to read the data from|
+| *dataOut* | Buffer in which the read data will be stored |
+| *dataOut_len* | Maximum amount of data in bytes to be read from the file |
+| *bytesRead* | The actual number of bytes read from the file |
+
+##### Description
+It works exactly as the standard FatFs *f_read* function. The encryption and integrity verification are handled transparently, except from the fact that an error is raised if some illicit modifications are detected in a data sector.
+
+### secure_write
+The secure_write function writes data to a file.
+
+	SE3_FRESULT secure_write(
+		SE3_FIL* se_fp, 
+		 *dataIn, 
+		 uint32_t dataIn_len
+	);
+
+| | |
+| ------- | ---------------------- |
+| *se_fp* | Pointer to the open file object structure to write the data to|
+| *dataIn* | Buffer storing the data to be written |
+| *dataIn_len* | Number of bytes to be written |
+
+##### Description
+It works exactly as the standard FatFs *f_write* function. The encryption and integrity verification are handled transparently, except from the fact that an error is raised if some illicit modifications are detected in a data sector.
+
+### secure_seek
+The secure_seek function moves the file read/write pointer of an open file object.
+
+	SE3_FRESULT secure_seek(
+		SE3_FIL* se_fp, 
+		int64_t offset, 
+		int32_t *position, 
+		uint8_t whence
+	);
+
+| | |
+| ------- | ---------------------- |
+| *se_fp* | Pointer to the open file object |
+| *offset* | Byte offset from the *whence* parameter to set read/write pointer|
+| *position* | Final position of the read/write pointer |
+| *whence*  | position in the file *whence* start to count *offset* |
+
+##### Description
+The *secure_seek* function moves the read/write pointer. It takes count of the overhead introduced by SEFatFs and provides a transparent way to work just like the FatFs *secure_seek* function. The only difference is that *secure_seek* does not support pre-allocation, since it cannot be done efficiently with an encrypted file. The position saturates at file ending.
+
+### Directory management
 	SE3_FRESULT secure_mkdir(char *path, uint32_t keyID, uint16_t algo);
 
 	SE3_FRESULT secure_opendir(SE3_DIR* se_dp, char *path);
