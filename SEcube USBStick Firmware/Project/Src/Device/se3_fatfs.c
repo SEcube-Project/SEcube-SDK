@@ -437,7 +437,7 @@ SE3_FRESULT read_sector(SE3_FIL* se_fp, uint32_t sector_id, uint8_t* data, uint1
 	uint8_t sector_IV[SE3_FATFS_IV_LEN];
 
 	if (sector_id == 0)
-		return SE3_FR_INVALID_PARAMETER;
+		return SE3_FR_INT_ERR;
 	if (f_tell(&(se_fp->fp)) != SE3_FATFS_SECTOR_SIZE*sector_id)
 	{
 		if ((res = f_lseek(&(se_fp->fp), SE3_FATFS_SECTOR_SIZE*sector_id)))
@@ -785,7 +785,11 @@ SE3_FRESULT getSHA256string(uint8_t* input, int length, uint8_t* output)
 {
 	B5_tSha256Ctx ctx;
 	uint8_t bufferName[B5_SHA256_DIGEST_SIZE];
+	uint8_t* pout;
 	uint16_t i;
+	const char * hex = "0123456789abcdef";
+
+	pout = output;
 
 	if ((B5_SHA256_RES_OK != B5_Sha256_Init(&ctx)))
 	{
@@ -802,8 +806,12 @@ SE3_FRESULT getSHA256string(uint8_t* input, int length, uint8_t* output)
 
 	for (i = 0; i < B5_SHA256_DIGEST_SIZE; i++)
 	{
-		sprintf((char*) &(output[i * 2]), "%02x", (uint8_t) bufferName[i]);
+		//sprintf((char*) &(output[i * 2]), "%02x", (uint8_t) bufferName[i]);
+		*pout++ = hex[(bufferName[i]>>4)&0xF];
+		*pout++ = hex[(bufferName[i])&0xF];
 	}
+
+	*pout = 0;
 
 	return SE3_FR_OK;
 }
