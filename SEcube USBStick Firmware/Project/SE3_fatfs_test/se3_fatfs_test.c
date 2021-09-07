@@ -180,19 +180,19 @@ int test_write_read_sector_multiple()
 	res = 0;
 
 	res += secure_open(&fp, "prova3.txt", FA_CREATE_ALWAYS | FA_WRITE, 1, SE3_ALGO_AES_HMACSHA256);
-	res += secure_write(&fp, (void *) payload, 2*SEFILE_LOGIC_DATA);
+	res += secure_write(&fp, (void *) payload, 2*SE3_FATFS_LOGIC_DATA);
 	res += secure_close(&fp);
 
 	res += secure_open(&fp, "prova3.txt", FA_READ, 1, SE3_ALGO_AES_HMACSHA256);
 	res += secure_read(&fp, buffOut, PAYLOAD_SIZE, &bytes_read);
-	if (bytes_read != 2*SEFILE_LOGIC_DATA)
+	if (bytes_read != 2*SE3_FATFS_LOGIC_DATA)
 		return TEST_FAIL;
 	res += secure_close(&fp);
 
 	if (res)
 		return TEST_FAIL;
 
-	if (memcmp(payload, buffOut, 2*SEFILE_LOGIC_DATA))
+	if (memcmp(payload, buffOut, 2*SE3_FATFS_LOGIC_DATA))
 		return TEST_FAIL;
 
 	return TEST_PASS;
@@ -214,10 +214,10 @@ int test_seek()
 	res += secure_close(&fp);
 
 	res += secure_open(&fp, "prova3.txt", FA_READ | FA_WRITE, 1, SE3_ALGO_AES_HMACSHA256);
-	res += secure_seek(&fp, 100, &position, SEFILE_END);
+	res += secure_seek(&fp, 100, &position, SE3_FATFS_END);
 	if (position != PAYLOAD_SIZE)
 		return TEST_FAIL;
-	res += secure_seek(&fp, -500, &position, SEFILE_END);
+	res += secure_seek(&fp, -500, &position, SE3_FATFS_END);
 	res += secure_read(&fp, buffOut, 2000, &bytes_read);
 	if(bytes_read != 500)
 		return TEST_FAIL;
@@ -292,7 +292,7 @@ int test_negative_seek()
 	secure_open(&se_fp, "prova3.txt", FA_CREATE_ALWAYS | FA_WRITE, 1, SE3_ALGO_AES_HMACSHA256);
 
 	secure_write(&se_fp, (void *) payload, PAYLOAD_SIZE);
-	if(secure_seek(&se_fp, -40000, &position, SEFILE_END) != SE3_FR_SEEK_ERROR)
+	if(secure_seek(&se_fp, -40000, &position, SE3_FATFS_END) != SE3_FR_SEEK_ERROR)
 		return TEST_FAIL;
 	secure_close(&se_fp);
 

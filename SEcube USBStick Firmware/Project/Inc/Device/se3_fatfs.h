@@ -6,18 +6,18 @@
 
 #define SE3_FATFS_KEY_SIZE 16
 
-#define SEFILE_NONCE_LEN 32
-#define SIGNATURE_LEN 32
-#define SEFILE_HEADER_PLAINTXT_LEN 16
-#define SE3_FILE_SECTOR_SIZE _MAX_SS
-#define SE3_SECTOR_ENCRYPTED_DATA_SIZE (SE3_FILE_SECTOR_SIZE - SIGNATURE_LEN)
-#define SEFILE_IV_LEN 16
-#define SEFILE_LOGIC_DATA (SE3_FILE_SECTOR_SIZE - sizeof(uint16_t) - SIGNATURE_LEN)
+#define SE3_FATFS_NONCE_LEN 32
+#define SE3_FATFS_SIGNATURE_LEN 32
+#define SE3_FATFS_HEADER_PLAINTXT_LEN 16
+#define SE3_FATFS_SECTOR_SIZE _MAX_SS
+#define SE3_FATFS_SECTOR_ENCRYPTED_DATA_SIZE (SE3_FATFS_SECTOR_SIZE - SE3_FATFS_SIGNATURE_LEN)
+#define SE3_FATFS_IV_LEN 16
+#define SE3_FATFS_LOGIC_DATA (SE3_FATFS_SECTOR_SIZE - sizeof(uint16_t) - SE3_FATFS_SIGNATURE_LEN)
 
 //defines for seek options
-#define SEFILE_BEGIN 0
-#define SEFILE_END 1
-#define SEFILE_CURRENT 2
+#define SE3_FATFS_BEGIN 0
+#define SE3_FATFS_END 1
+#define SE3_FATFS_CURRENT 2
 
 
 
@@ -26,12 +26,12 @@ typedef struct
 	FIL fp;
 	uint32_t keyID;
 	uint16_t algo;
-	uint8_t decrypt_buffer[SEFILE_LOGIC_DATA];
+	uint8_t decrypt_buffer[SE3_FATFS_LOGIC_DATA];
 	uint16_t decrypt_buffer_size;
 	uint8_t mode;
 	bool dirty_bit;
 	uint32_t pointer;
-	uint8_t IV[SEFILE_IV_LEN];
+	uint8_t IV[SE3_FATFS_IV_LEN];
 } SE3_FIL;
 
 
