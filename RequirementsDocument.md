@@ -1,5 +1,5 @@
-# SE3fat_fs Requirements Document 
-
+# Requirements Document 
+## SEFatFs
 Authors: D. Stochino, M. Meloni
 
 
@@ -37,8 +37,8 @@ Authors: D. Stochino, M. Meloni
 left to right direction
 actor User as u
 actor SDcard as mp
-u -- (SEfat_fs)
-mp --(SEfat_fs)
+u -- (SEFatFs)
+mp --(SEFatFs)
 ```
 
 ## Interfaces
@@ -46,10 +46,10 @@ mp --(SEfat_fs)
 | Actor | Logical Interface | Physical Interface  |
 | ------------- |:-------------:| -----:|
 | SDcard  | read/write primitives     | SDIO |  
-| User | [SE_fatfs APIs](#apis) |-|
+| User | [SEFatFs APIs](#apis) |-|
 
 # Stories and personas
-Nico, a SECube firmware developer, wants to store a large database of keys inside the SECube platform. Unfortunately, the internal flash memory of SEcube is too small. Moreover, most of the available database systems for embedded systems require a properly structured file system in order to function. The SDCard slot of the SECube can be exploited for this purpose but, since it is easy to remove the SDcard from the secube and plug it into a common PC, the keys stored inside can be easly leaked aswell. SEfat_fs provides file primitives that can be utilized to create secure files that give both confidentiality and integrity, making use of cryptograpfic functions.
+Nico, a SECube firmware developer, wants to store a large database of keys inside the SECube platform. Unfortunately, the internal flash memory of SEcube is too small. Moreover, most of the available database systems for embedded systems require a properly structured file system in order to function. The SDCard slot of the SECube can be exploited for this purpose but, since it is easy to remove the SDcard from the secube and plug it into a common PC, the keys stored inside can be easly leaked aswell. SEFatFs provides file primitives that can be utilized to create secure files that give both confidentiality and integrity, making use of cryptograpfic functions.
 
 # Functional and non functional requirements
 
@@ -123,7 +123,7 @@ Nico, a SECube firmware developer, wants to store a large database of keys insid
 
 # Glossary
 ```plantuml
-class SE3fat_fs{
+class SEFatFs{
 
 }
 
@@ -142,7 +142,7 @@ class SE3_DIR {
 }
 
 
-SE3fat_fs "1"---"*" Secure_item
+SEFatFs "1"---"*" Secure_item
 SE3_DIR "1"---"*" Secure_item
 Secure_item <|---  SE3_FIL
 Secure_item <|---  SE3_DIR
@@ -152,17 +152,19 @@ Secure_item <|---  SE3_DIR
 # System Design
 
 ```plantuml
+
+left to right direction
 package "SECube" {
 	[SECube firmware]
-	[Fat_fs driver]
-	[SE3fat_fs]
+	[FatFs driver]
+	[SEFatFs]
 	[SDIO driver]
 }
 
-[SECube firmware] <-> [SE3fat_fs]
-[SECube firmware] <-> [Fat_fs driver]
-[SE3fat_fs] <-> [Fat_fs driver]
-[Fat_fs driver] <-> [SDIO driver]
+[SECube firmware] <-> [SEFatFs]
+[SECube firmware] <-> [FatFs driver]
+[SEFatFs] <-> [FatFs driver]
+[FatFs driver] <-> [SDIO driver]
 
 [SDcard] <-> [SDIO driver]
 ```
@@ -176,7 +178,7 @@ package "SECube" {
 
 	SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len);
 
-	SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, int32_t *position, uint8_t whence);
+	SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, int32_t *position, uint8_t whence);
 
 	SE3_FRESULT secure_mkdir(char *path, uint32_t keyID, uint16_t algo);
 
