@@ -73,7 +73,7 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 SE3_FRESULT secure_close(SE3_FIL* se_fp);
 SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, uint32_t *bytesRead);
 SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len);
-SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, uint32_t *position, uint8_t whence);
+SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint8_t whence);
 
 
 #endif /* SRC_DEVICE_SE3_FATFS_H_ */

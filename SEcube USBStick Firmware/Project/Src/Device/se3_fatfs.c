@@ -110,7 +110,7 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 	return SE3_FR_OK;
 }
 
-SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, uint32_t *position, uint8_t whence)
+SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint8_t whence)
 {
 	SE3_FRESULT res;
 	uint32_t start = 0;
@@ -134,7 +134,7 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, uint32_t *position, uint
 		start = filesize;
 	}
 
-	req_position = start + offset;
+	req_position = (int64_t) start + offset;
 
 	if(req_position < 0)
 		return SE3_FR_SEEK_ERROR;
@@ -158,7 +158,7 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, uint32_t *position, uint
 			write_sector(se_fp, get_current_sector(se_fp));
 		}
 	}
-	se_fp->pointer = req_position;
+	se_fp->pointer = (uint32_t) req_position;
 
 	if (end_of_last_sector(se_fp))
 		se_fp -> decrypt_buffer_size = 0;
