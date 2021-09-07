@@ -113,7 +113,8 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 SE3_FRESULT secure_seek(SE3_FIL* se_fp, int32_t offset, uint32_t *position, uint8_t whence)
 {
 	SE3_FRESULT res;
-	uint32_t start = 0, req_position;
+	uint32_t start = 0;
+	int64_t req_position;
 	uint32_t filesize;
 	uint32_t curr_sector, end_sector;
 	//uint32_t padding_len;
@@ -846,16 +847,16 @@ void get_filename(char *path, char *file_name, int maxLength)
 		f_name = strrchr(path, '\\');
 		if (f_name == NULL)
 		{
-			strncpy(file_name, path, maxLength);
+			memcpy(file_name, path, maxLength);
 		}
 		else
 		{
-			strncpy(file_name, f_name + 1, maxLength);
+			memcpy(file_name, f_name + 1, maxLength);
 		}
 	}
 	else
 	{
-		strncpy(file_name, f_name + 1, maxLength);
+		memcpy(file_name, f_name + 1, maxLength);
 	}
 }
 
@@ -888,8 +889,6 @@ bool validate_file_object(SE3_FIL* se_fp)
 	if (se_fp->decrypt_buffer_size > SEFILE_LOGIC_DATA)
 		return false;
 
-	if (se_fp->dirty_bit != false && se_fp->dirty_bit != true)
-		return false;
 
 	//force verification of file pointer
 /*	if (f_lseek(&se_fp->fp, f_tell(&se_fp->fp)))
