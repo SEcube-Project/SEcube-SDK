@@ -26,11 +26,13 @@ typedef struct
 
 typedef struct
 {
-	// notice that the size of the SE3_FATFS_SECTOR does depend on the union. The size of the union is the size of the largest data inside the union (plus memory alignment if any).
+	// Union allows us to access the structure also as an array
 	union
 	{
 		struct
 		{
+			// notice that the size of the SE3_FATFS_SECTOR does depend on the union.
+			//The size of the union is the size of the largest data inside the union (plus memory alignment if any).
 			union
 			{
 				SE3_FATFS_HEADER header;               /**< See \ref SE3_FATFS_HEADER .*/
@@ -189,7 +191,8 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint
 		return SE3_FR_SEEK_ERROR;
 	}*/
 
-	*position = se_fp->pointer;
+	if (position != NULL)
+		*position = se_fp->pointer;
 
 	return SE3_FR_OK;
 
@@ -256,7 +259,8 @@ SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, 
 
 	}
 
-	*bytesRead = read_pointer;
+	if (bytesRead != NULL)
+		*bytesRead = read_pointer;
 
 	return SE3_FR_OK;
 }
@@ -877,10 +881,18 @@ SE3_FRESULT get_filesize(SE3_FIL* se_fp, uint32_t* filesize)
 	return SE3_FR_OK;
 }
 
+/*
+ * Test some fields in order to detect if a SE_FIL struct
+ * has not been initialized, in order to avoid an undefined behavior.
+ * It is not bulletproof, always test the result of secure_open() !!!
+ */
 static
 bool validate_file_object(SE3_FIL* se_fp)
 {
 	if (se_fp == NULL)
+		return false;
+
+	if (se_fp->fp.fs == NULL)
 		return false;
 
 	if (se_fp->algo > SE3_ALGO_MAX)
@@ -889,11 +901,6 @@ bool validate_file_object(SE3_FIL* se_fp)
 	if (se_fp->decrypt_buffer_size > SE3_FATFS_LOGIC_DATA)
 		return false;
 
-
-	//force verification of file pointer
-/*	if (f_lseek(&se_fp->fp, f_tell(&se_fp->fp)))
-			return false;
-*/
 
 	return true;
 }
