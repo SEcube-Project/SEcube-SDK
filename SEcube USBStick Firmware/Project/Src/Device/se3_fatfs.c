@@ -209,6 +209,9 @@ SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, 
 	if (!validate_file_object(se_fp))
 		return SE3_FR_INVALID_OBJECT;
 
+	if (! (se_fp->mode & FA_READ))
+		return SE3_FR_DENIED;
+
 	read_pointer = 0;
 	remaining_data = dataOut_len;
 	sector_offset = (uint16_t) (se_fp->pointer % SE3_FATFS_LOGIC_DATA);
