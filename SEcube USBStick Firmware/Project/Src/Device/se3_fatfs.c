@@ -600,11 +600,11 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 	header_sector.header.algorithm = se_fp->algo;
 	memset(&(header_sector.header.padding), 0, 10);
 
-	header_sector.header.magic = 0;
+	se3_rand(sizeof(header_sector.header.magic), (uint8_t*) &(header_sector.header.magic));
 	se3_rand(SE3_FATFS_IV_LEN, (uint8_t*) &(header_sector.header.nonce_ctr));
-	header_sector.header.uid = 0;
-	header_sector.header.uid_cnt = 0;
-	header_sector.header.ver = 0;
+	se3_rand(sizeof(header_sector.header.uid), (uint8_t*) &(header_sector.header.uid));
+	se3_rand(sizeof(header_sector.header.uid_cnt), (uint8_t*) &(header_sector.header.uid_cnt));
+	se3_rand(sizeof(header_sector.header.ver), (uint8_t*) &(header_sector.header.ver));
 
 
 	get_filename(path, filename, _MAX_LFN);

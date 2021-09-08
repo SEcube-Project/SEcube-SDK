@@ -42,6 +42,7 @@ int begin_test()
 
 	f_open(&test_report, "test_report.txt", FA_OPEN_ALWAYS | FA_WRITE);
 
+	f_printf(&test_report, "Built in date: %s at %s\n", __DATE__, __TIME__);
 
 	tests_failed += execute_test(test_write_read, "test_write_read");
 	tests_failed += execute_test(test_write_readless, "test_write_read_less");
