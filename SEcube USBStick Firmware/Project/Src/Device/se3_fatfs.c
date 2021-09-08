@@ -119,6 +119,8 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint
 	int64_t req_position;
 	uint32_t filesize;
 	uint32_t curr_sector, end_sector;
+
+	//old variables used for file expanding functionality
 	//uint32_t padding_len;
 	//uint8_t *padding;
 
@@ -170,7 +172,7 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint
 			return res;
 	}
 
-
+	//old code used to extend the file in case of a seek moving the pointer past the file ending
 	/*if(req_position <= filesize)
 	{
 

@@ -14,10 +14,21 @@
 #define SE3_FATFS_IV_LEN 16
 #define SE3_FATFS_LOGIC_DATA (SE3_FATFS_SECTOR_SIZE - sizeof(uint16_t) - SE3_FATFS_SIGNATURE_LEN)
 
-//defines for seek options
-#define SE3_FATFS_BEGIN 0
-#define SE3_FATFS_END 1
-#define SE3_FATFS_CURRENT 2
+/**
+ * @defgroup Seek_Defines
+ *  @{
+ */
+	/**
+	 * \name Defines for seek options.
+	 */
+	///@{
+		#define SE3_FATFS_BEGIN 0
+		#define SE3_FATFS_END 1
+		#define SE3_FATFS_CURRENT 2
+	///@}
+/** @}*/
+
+
 
 
 
@@ -69,10 +80,46 @@ typedef enum {
 	SE3_FR_SEEK_ERROR
 } SE3_FRESULT;
 
+/** @brief This function opens or creates a secure file.
+ * @param [out] se_fp Pointer to a blank file object structure.
+ * @param [in] path The path of a file as plaintext, terminated by a null character.
+ * @param [in] mode Used to specify read-only or read-write privilege, and also to specify if we want to create a new file.
+ * @param [in] keyID ID of the cryptographic key to associate to the new file, ignored if opening existing file.
+ * @param [in] algo ID of the cryptographic algorithm to associate to the new file, ignored if opening existing file.
+ * @return The function returns 0 in case of success. See the various error codes in SE3_FRESULT.
+ */
 SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo);
+
+/** @brief This function closes an open file.
+ * @param [in] se_fp Pointer to an open file structure.
+ * @return The function returns 0 in case of success. See the various error codes in SE3_FRESULT.
+ */
 SE3_FRESULT secure_close(SE3_FIL* se_fp);
+
+/** @brief This function reads dataOut_len bytes into dataOut from an open file.
+ * @param [in] se_fp Pointer to the open file to read from.
+ * @param [out] dataOut An already allocated buffer used to store the read data.
+ * @param [in] dataOut_len The amount of bytes we want to read.
+ * @param [out] bytesRead Number of effective bytes read.
+ * @return The function returns 0 in case of success. See the various error codes in SE3_FRESULT.
+ */
 SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, uint32_t *bytesRead);
+
+/** @brief This function writes the bytes stored at dataIn to an open file.
+ * @param [in] se_fp Pointer to the open file to write to.
+ * @param [in] dataIn The array of bytes that have to be written.
+ * @param [in] dataIn_len The amount of bytes we want to write.
+ * @return The function returns 0 in case of success. See the various error codes in SE3_FRESULT.
+ */
 SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len);
+
+/** @brief This function is used to move the file pointer of an open file.
+ * @param [in] se_fp Pointer to the open file whose file pointer we want to move.
+ * @param [in] offset Amount of bytes we want to move.
+ * @param [out] position Pointer to a uint32_t variable where the final position is stored, it cannot be NULL.
+ * @param [in] whence According to this parameter we can choose if we want to move from the file beginning, file ending or current file pointer position. See \ref Seek_Defines.
+ * @return The function returns 0 in case of success. See the various error codes in SE3_FRESULT.
+ */
 SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint8_t whence);
 
 
