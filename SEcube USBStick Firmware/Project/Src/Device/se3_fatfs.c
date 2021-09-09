@@ -78,6 +78,9 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 	if (se_fp == NULL)
 		return SE3_FR_INVALID_OBJECT;
 
+	if (mode & FA_OPEN_ALWAYS)
+		return SE3_FR_NOT_IMPLEMENTED;
+
 	se_fp->mode = mode;
 
 	//Create a new file if needed
