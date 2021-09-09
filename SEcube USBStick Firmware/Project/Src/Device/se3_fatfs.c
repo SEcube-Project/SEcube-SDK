@@ -281,6 +281,9 @@ SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
 	if (!validate_file_object(se_fp))
 			return SE3_FR_INVALID_OBJECT;
 
+	if (! (se_fp->mode & FA_WRITE))
+		return SE3_FR_DENIED;
+
 	write_pointer = 0;
 	remaining_data = dataIn_len;
 	sector_offset = (uint16_t) (se_fp->pointer % SE3_FATFS_LOGIC_DATA);
