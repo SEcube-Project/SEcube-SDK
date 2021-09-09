@@ -1,7 +1,7 @@
 #include "se3_fatfs.h"
 #include "se3_rand.h"
 
-#define end_of_last_sector(se_fp) ((se_fp->pointer) == (f_size(&(se_fp->fp))/SE3_FATFS_SECTOR_SIZE-1)*SE3_FATFS_LOGIC_DATA)
+#define end_of_last_sector(se_fp) (((se_fp)->pointer) == (f_size(&((se_fp)->fp))/SE3_FATFS_SECTOR_SIZE-1)*SE3_FATFS_LOGIC_DATA)
 #define get_current_sector(se_fp) ((se_fp)->pointer/SE3_FATFS_LOGIC_DATA + 1)
 
 #pragma pack(push,1) //These are a physical structures, thus we don't want to allow
