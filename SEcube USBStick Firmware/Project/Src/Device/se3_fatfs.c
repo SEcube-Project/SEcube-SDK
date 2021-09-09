@@ -98,15 +98,19 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 			return res;
 	}
 
+	//Initialize remaining fields
 	se_fp->pointer = 0;
 	se_fp->dirty_bit = false;
 
+
 	if (!end_of_last_sector(se_fp))
 	{
+		//Load the first data sector if existing
 		if ((res = read_sector(se_fp, 1, se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size)))
 			return res;
 	} else
 	{
+		//otherwise create an empty one
 		se_fp->decrypt_buffer_size = 0;
 	}
 
@@ -121,7 +125,7 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint
 	uint32_t start = 0;
 	int64_t req_position;
 	uint32_t filesize;
-	uint32_t curr_sector, end_sector;
+	uint32_t curr_sector, target_sector;
 
 	//old variables used for file expanding functionality
 	//uint32_t padding_len;
@@ -149,13 +153,14 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint
 	if (req_position > filesize)
 		req_position = filesize;
 
-	end_sector = req_position / SE3_FATFS_LOGIC_DATA + 1 ;
+	target_sector = req_position / SE3_FATFS_LOGIC_DATA + 1 ;
 	curr_sector = se_fp->pointer / SE3_FATFS_LOGIC_DATA + 1;
 
 
 
-	if(curr_sector != end_sector)
+	if(curr_sector != target_sector)
 	{
+		//Save current sector if needed (with possible padding)
 		if (se_fp->decrypt_buffer_size > 0 && se_fp->dirty_bit)
 		{
 			if (se_fp->decrypt_buffer_size < SE3_FATFS_LOGIC_DATA)
@@ -165,13 +170,17 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint
 			write_sector(se_fp, get_current_sector(se_fp));
 		}
 	}
+
+	//Set logic file pointer
 	se_fp->pointer = (uint32_t) req_position;
 
+	//Create a new sector if reached end of last sector
 	if (end_of_last_sector(se_fp))
 		se_fp -> decrypt_buffer_size = 0;
 	else
 	{
-		if((res = read_sector(se_fp, end_sector, se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size)))
+		//Otherwise read the target one
+		if((res = read_sector(se_fp, target_sector, se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size)))
 			return res;
 	}
 
@@ -226,19 +235,23 @@ SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, 
 		{
 			bytes_to_read = SE3_FATFS_LOGIC_DATA - sector_offset;
 
-			//Fill all the available space in the buffer
+			//Read all the data stored in the buffer
 			memcpy(dataOut + read_pointer, se_fp->decrypt_buffer + sector_offset,  bytes_to_read);
+
+			//Save the current sector if needed
 			if(se_fp->dirty_bit)
 			{
 				if ((res = write_sector(se_fp, get_current_sector(se_fp))))
 					return res;
 			}
 
+			//Update pointers
 			se_fp->pointer += bytes_to_read;
 			read_pointer += bytes_to_read;
 			remaining_data -= bytes_to_read;
 			sector_offset = 0;
 			se_fp->dirty_bit = false;
+
 			//If not reachead the end of file (and last sector) load the next sector
 			if (!end_of_last_sector(se_fp))
 			{
@@ -246,20 +259,24 @@ SE3_FRESULT secure_read(SE3_FIL* se_fp, uint8_t *dataOut, uint32_t dataOut_len, 
 						se_fp->pointer / SE3_FATFS_LOGIC_DATA + 1,
 						se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size)))
 					return res;
-			} else //Otherwise create a new empty sector
+			} else
 			{
+				//Otherwise create a new empty sector
 				se_fp->decrypt_buffer_size = 0;
 			}
 
 		}
 		else
 		{
+			//Read remaining bytes entirely from decrypt_buffer
 			if (remaining_data <= se_fp->decrypt_buffer_size - sector_offset)
 				bytes_to_read = remaining_data;
 			else
 				bytes_to_read = se_fp->decrypt_buffer_size - sector_offset;
 
 			memcpy(dataOut + read_pointer, se_fp->decrypt_buffer + sector_offset,  bytes_to_read);
+
+			//Update pointers and exit loop
 			read_pointer += bytes_to_read;
 			se_fp->pointer += bytes_to_read;
 			remaining_data = 0;
@@ -299,14 +316,20 @@ SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
 			//Fill all the available space in the buffer
 			memcpy(se_fp->decrypt_buffer + sector_offset, dataIn + write_pointer, byte_to_write);
 			se_fp->decrypt_buffer_size = SE3_FATFS_LOGIC_DATA;
+
+			//Save current sector
 			if ((res = write_sector(se_fp, get_current_sector(se_fp))))
 				return res;
 
+
+			//Update pointers
 			se_fp->pointer += byte_to_write;
 			write_pointer += byte_to_write;
 			remaining_data -= byte_to_write;
 			sector_offset = 0;
 			se_fp->dirty_bit = false;
+
+			//If not reachead the end of file (and last sector) load the next sector
 			if (!end_of_last_sector(se_fp))
 			{
 				if ((res = read_sector(se_fp,
@@ -315,13 +338,17 @@ SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
 					return res;
 			} else
 			{
+				//Otherwise create a new empty sector
 				se_fp->decrypt_buffer_size = 0;
 			}
 
 		}
 		else
 		{
+			//Write remaining data to decrypt_buffer
 			memcpy(se_fp->decrypt_buffer+sector_offset, dataIn + write_pointer, remaining_data);
+
+			//Update pointer and buffer size and exit loop
 			se_fp->pointer += remaining_data;
 			if (sector_offset+remaining_data > se_fp->decrypt_buffer_size)
 				se_fp->decrypt_buffer_size = sector_offset+remaining_data;
@@ -341,8 +368,10 @@ SE3_FRESULT secure_close(SE3_FIL* se_fp)
 	if (!validate_file_object(se_fp))
 			return SE3_FR_INVALID_OBJECT;
 
+	//Save current sector if needed
 	if (se_fp->decrypt_buffer_size > 0 && se_fp->dirty_bit)
 	{
+		//Fill empty space with random data
 		if (se_fp->decrypt_buffer_size < SE3_FATFS_LOGIC_DATA)
 		{
 			se3_rand(SE3_FATFS_LOGIC_DATA-se_fp->decrypt_buffer_size, se_fp->decrypt_buffer + se_fp->decrypt_buffer_size);
@@ -372,22 +401,27 @@ SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode)
 	if ((res = (SE3_FRESULT) f_open(&(se_fp->fp), enc_name_path, mode)))
 		return res;
 
+	//Check if file size is a sector size multiple
 	if (f_size(&se_fp->fp)%SE3_FATFS_SECTOR_SIZE != 0)
 	{
 		f_close(&se_fp->fp);
 		return SE3_FR_DATA_ENC_ERROR;
 	}
 
+	//read header
 	if((res = (SE3_FRESULT) f_read(&(se_fp->fp), encoded_header_sector.data, sizeof(SE3_FATFS_SECTOR), &br)))
 	{
 		f_close(&se_fp->fp);
 		return res;
 	}
+
 	if (br < sizeof(SE3_FATFS_SECTOR))
 	{
 		f_close(&se_fp->fp);
 		return SE3_FR_HEADER_ENC_ERROR;
 	}
+
+	//read information stored in the header
 	se_fp->algo = encoded_header_sector.header.algorithm;
 	se_fp->keyID =  encoded_header_sector.header.key_id;
 	if ((res = crypt_header(encoded_header_sector.data, header_sector.data, se_fp->algo, se_fp->keyID, SE3_DIR_DECRYPT)))
@@ -414,14 +448,18 @@ SE3_FRESULT write_sector(SE3_FIL* se_fp, uint32_t sector_id)
 
 	if (sector_id == 0)
 		return SE3_FR_INVALID_PARAMETER;
+
+	//Place raw file pointer in the correct position
 	if (f_tell(&(se_fp->fp)) != SE3_FATFS_SECTOR_SIZE*sector_id)
 	{
 		if ((res = (SE3_FRESULT) f_lseek(&(se_fp->fp), SE3_FATFS_SECTOR_SIZE*sector_id)))
 			return res;
 	}
 
+	//Prepare data to be encrypted
 	memcpy(data_sector.logic_data, se_fp->decrypt_buffer, SE3_FATFS_LOGIC_DATA);
 	data_sector.len = se_fp->decrypt_buffer_size;
+
 
 	compute_IV(se_fp->IV, sector_IV, sector_id);
 
@@ -436,7 +474,7 @@ SE3_FRESULT write_sector(SE3_FIL* se_fp, uint32_t sector_id)
 }
 
 
-//Reads a sector, decrypt it and places it in decrypt buffer
+//Reads a sector, decrypt it and places it in data parameter
 //Valid sector_id(s) start from 1.
 static
 SE3_FRESULT read_sector(SE3_FIL* se_fp, uint32_t sector_id, uint8_t* data, uint16_t* data_len)
@@ -449,12 +487,15 @@ SE3_FRESULT read_sector(SE3_FIL* se_fp, uint32_t sector_id, uint8_t* data, uint1
 
 	if (sector_id == 0)
 		return SE3_FR_INT_ERR;
+
+	//Place raw file pointer in the correct position
 	if (f_tell(&(se_fp->fp)) != SE3_FATFS_SECTOR_SIZE*sector_id)
 	{
 		if ((res = (SE3_FRESULT) f_lseek(&(se_fp->fp), SE3_FATFS_SECTOR_SIZE*sector_id)))
 			return res;
 	}
 
+	//Read encrypted data
 	if ((res = (SE3_FRESULT) f_read(&(se_fp->fp), encoded_data_sector.data, SE3_FATFS_SECTOR_SIZE, &br)))
 		return res;
 
@@ -614,12 +655,14 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 	se3_rand(sizeof(header_sector.header.uid_cnt), (uint8_t*) &(header_sector.header.uid_cnt));
 	se3_rand(sizeof(header_sector.header.ver), (uint8_t*) &(header_sector.header.ver));
 
-
+	//Populate filename
 	get_filename(path, filename, _MAX_LFN);
 	filename_len = strnlen(filename, _MAX_LFN);
 	header_sector.header.fname_len = filename_len;
 	filename_start = header_sector.data + sizeof(SE3_FATFS_HEADER);
 	memcpy(filename_start, filename, filename_len);
+
+	//Populate padding
 	padding_start = (uint8_t*) header_sector.data + sizeof(SE3_FATFS_HEADER)+filename_len;
 	se3_rand(SE3_FATFS_LOGIC_DATA-sizeof(SE3_FATFS_HEADER)-filename_len, padding_start);
 	header_sector.len = sizeof(SE3_FATFS_HEADER) + filename_len;
