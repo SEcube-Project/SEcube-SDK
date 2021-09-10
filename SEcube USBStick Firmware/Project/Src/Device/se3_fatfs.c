@@ -153,7 +153,7 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint
 	if (req_position > filesize)
 		req_position = filesize;
 
-	target_sector = req_position / SE3_FATFS_LOGIC_DATA + 1 ;
+	target_sector = (uint32_t) (req_position / SE3_FATFS_LOGIC_DATA + 1) ;
 	curr_sector = se_fp->pointer / SE3_FATFS_LOGIC_DATA + 1;
 
 
