@@ -57,7 +57,7 @@ static SE3_FRESULT initialise_crypto_context(uint16_t algo, uint32_t keyID, uint
 static SE3_FRESULT set_nonce(uint32_t sid, uint8_t* nonce, uint16_t nonce_len);
 static SE3_FRESULT execute_crypto_header(uint32_t sid, uint8_t* input_data, uint8_t* output_data);
 static SE3_FRESULT getSHA256string(uint8_t* input, int length, uint8_t* output);
-static void get_filename(char *path, char *file_name, int maxLength);
+static void get_filename(char *path, char *file_name, size_t maxLength);
 static void get_path(char *full_path, char *path);
 static SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode);
 static SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode);
@@ -122,7 +122,7 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint8_t whence)
 {
 	SE3_FRESULT res;
-	uint32_t start = 0;
+	uint32_t start;
 	int64_t req_position;
 	uint32_t filesize;
 	uint32_t curr_sector, target_sector;
@@ -134,16 +134,19 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint
 	if (!validate_file_object(se_fp))
 			return SE3_FR_INVALID_OBJECT;
 
-	if(whence == SE3_FATFS_CURRENT)
-		start = se_fp->pointer;
 
 	if ((res = get_filesize(se_fp, &filesize)))
 		return res;
 
-	if(whence == SE3_FATFS_END)
+	if(whence == SE3_FATFS_CURRENT)
+		start = se_fp->pointer;
+
+	else if(whence == SE3_FATFS_END)
 	{
 		start = filesize;
 	}
+	else
+		start = 0;
 
 	req_position = (int64_t) start + offset;
 
@@ -167,7 +170,8 @@ SE3_FRESULT secure_seek(SE3_FIL* se_fp, int64_t offset, uint32_t *position, uint
 			{
 				se3_rand(SE3_FATFS_LOGIC_DATA-se_fp->decrypt_buffer_size, se_fp->decrypt_buffer + se_fp->decrypt_buffer_size);
 			}
-			write_sector(se_fp, get_current_sector(se_fp));
+			if ( (res = write_sector(se_fp, get_current_sector(se_fp))) )
+				return res;
 		}
 	}
 
@@ -900,7 +904,7 @@ void get_path(char *full_path, char *path)
 }
 
 static
-void get_filename(char *path, char *file_name, int maxLength)
+void get_filename(char *path, char *file_name, size_t maxLength)
 {
 	if ((file_name == NULL) || (path == NULL))
 	{
