@@ -68,6 +68,7 @@ static SE3_FRESULT get_filesize(SE3_FIL* se_fp, uint32_t* filesize);
 static bool key_exists(uint32_t keyID);
 static bool validate_file_object(SE3_FIL* se_fp);
 static SE3_FRESULT set_file_pointer(SE3_FIL* se_fp, uint32_t new_pointer);
+static SE3_FRESULT to_SE3_FRESULT(FRESULT res);
 
 SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, uint16_t algo)
 {
@@ -284,7 +285,7 @@ SE3_FRESULT secure_close(SE3_FIL* se_fp)
 			return res;
 	}
 
-	if ( (res = (SE3_FRESULT) f_close(&(se_fp->fp)) ) )
+	if ( (res = to_SE3_FRESULT(f_close(&(se_fp->fp))) ) )
 			return res;
 
 	return SE3_FR_OK;
@@ -303,7 +304,7 @@ SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode)
 	if ((res = crypto_filename(path, enc_name_path, &encoded_name_length)))
 		return res;
 
-	if ((res = (SE3_FRESULT) f_open(&(se_fp->fp), enc_name_path, mode)))
+	if ((res = to_SE3_FRESULT(f_open(&(se_fp->fp), enc_name_path, mode))))
 		return res;
 
 	//Check if file size is a sector size multiple
@@ -314,7 +315,7 @@ SE3_FRESULT load_existing_file(SE3_FIL* se_fp, char* path, BYTE mode)
 	}
 
 	//read header
-	if((res = (SE3_FRESULT) f_read(&(se_fp->fp), encoded_header_sector.data, sizeof(SE3_FATFS_SECTOR), &br)))
+	if((res = to_SE3_FRESULT(f_read(&(se_fp->fp), encoded_header_sector.data, sizeof(SE3_FATFS_SECTOR), &br))))
 	{
 		f_close(&se_fp->fp);
 		return res;
@@ -357,7 +358,7 @@ SE3_FRESULT write_sector(SE3_FIL* se_fp, uint32_t sector_id)
 	//Place raw file pointer in the correct position
 	if (f_tell(&(se_fp->fp)) != SE3_FATFS_SECTOR_SIZE*sector_id)
 	{
-		if ((res = (SE3_FRESULT) f_lseek(&(se_fp->fp), SE3_FATFS_SECTOR_SIZE*sector_id)))
+		if ((res = to_SE3_FRESULT(f_lseek(&(se_fp->fp), SE3_FATFS_SECTOR_SIZE*sector_id))))
 			return res;
 	}
 
@@ -377,7 +378,7 @@ SE3_FRESULT write_sector(SE3_FIL* se_fp, uint32_t sector_id)
 	if ((res = crypt_sector(data_sector.data, encoded_data_sector.data, se_fp->algo, se_fp->keyID, sector_IV, SE3_DIR_ENCRYPT)))
 		return res;
 
-	if ((res = (SE3_FRESULT) f_write(&(se_fp->fp), encoded_data_sector.data, SE3_FATFS_SECTOR_SIZE, NULL)))
+	if ((res = to_SE3_FRESULT(f_write(&(se_fp->fp), encoded_data_sector.data, SE3_FATFS_SECTOR_SIZE, NULL))))
 		return res;
 
 	return SE3_FR_OK;
@@ -402,12 +403,12 @@ SE3_FRESULT read_sector(SE3_FIL* se_fp, uint32_t sector_id, uint8_t* data, uint1
 	//Place raw file pointer in the correct position
 	if (f_tell(&(se_fp->fp)) != SE3_FATFS_SECTOR_SIZE*sector_id)
 	{
-		if ((res = (SE3_FRESULT) f_lseek(&(se_fp->fp), SE3_FATFS_SECTOR_SIZE*sector_id)))
+		if ((res = to_SE3_FRESULT(f_lseek(&(se_fp->fp), SE3_FATFS_SECTOR_SIZE*sector_id))))
 			return res;
 	}
 
 	//Read encrypted data
-	if ((res = (SE3_FRESULT) f_read(&(se_fp->fp), encoded_data_sector.data, SE3_FATFS_SECTOR_SIZE, &br)))
+	if ((res = to_SE3_FRESULT(f_read(&(se_fp->fp), encoded_data_sector.data, SE3_FATFS_SECTOR_SIZE, &br))))
 		return res;
 
 	if (br == 0)
@@ -552,7 +553,7 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 		if (res != SE3_FR_OK)
 			return res;
 
-	res = (SE3_FRESULT) f_open(&(se_fp->fp), enc_name_path, mode);
+	res = to_SE3_FRESULT(f_open(&(se_fp->fp), enc_name_path, mode));
 	if (res != SE3_FR_OK)
 		return res;
 
@@ -583,7 +584,7 @@ SE3_FRESULT secure_create(SE3_FIL* se_fp, char* path, BYTE mode)
 	if ( (res = crypt_header(header_sector.data, encoded_header_sector, se_fp->algo, se_fp->keyID, SE3_DIR_ENCRYPT) ))
 		return res;
 
-	if ((res = (SE3_FRESULT) f_write(&(se_fp->fp), encoded_header_sector, SE3_FATFS_SECTOR_SIZE, NULL)))
+	if ((res = to_SE3_FRESULT(f_write(&(se_fp->fp), encoded_header_sector, SE3_FATFS_SECTOR_SIZE, NULL))))
 		return res;
 
 	memcpy(se_fp->IV, header_sector.header.nonce_ctr, SE3_FATFS_IV_LEN);
@@ -916,4 +917,32 @@ SE3_FRESULT set_file_pointer(SE3_FIL* se_fp, uint32_t new_pointer)
 
 
 	return SE3_FR_OK;
+}
+
+static
+SE3_FRESULT to_SE3_FRESULT(FRESULT res)
+{
+	switch (res) {
+		case FR_OK: return SE3_FR_OK;
+		case FR_DISK_ERR: return SE3_FR_DISK_ERR;
+		case FR_INT_ERR: return SE3_FR_INT_ERR;
+		case FR_NOT_READY: return SE3_FR_NOT_READY;
+		case FR_NO_FILE: return SE3_FR_NO_FILE;
+		case FR_NO_PATH: return SE3_FR_NO_PATH;
+		case FR_INVALID_NAME: return SE3_FR_INVALID_NAME;
+		case FR_DENIED: return SE3_FR_DENIED;
+		case FR_EXIST: return SE3_FR_EXIST;
+		case FR_INVALID_OBJECT: return SE3_FR_INVALID_OBJECT;
+		case FR_WRITE_PROTECTED: return SE3_FR_WRITE_PROTECTED;
+		case FR_INVALID_DRIVE: return SE3_FR_INVALID_DRIVE;
+		case FR_NOT_ENABLED: return SE3_FR_NOT_ENABLED;
+		case FR_NO_FILESYSTEM: return SE3_FR_NO_FILESYSTEM;
+		case FR_MKFS_ABORTED: return SE3_FR_MKFS_ABORTED;
+		case FR_TIMEOUT: return SE3_FR_TIMEOUT;
+		case FR_LOCKED: return SE3_FR_LOCKED;
+		case FR_NOT_ENOUGH_CORE: return SE3_FR_NOT_ENOUGH_CORE;
+		case FR_TOO_MANY_OPEN_FILES: return SE3_FR_TOO_MANY_OPEN_FILES;
+		case FR_INVALID_PARAMETER: return SE3_FR_INVALID_PARAMETER;
+		default: return SE3_FR_INT_ERR;
+	}
 }
