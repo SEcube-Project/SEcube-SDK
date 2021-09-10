@@ -78,7 +78,8 @@ typedef enum {
 	SE3_FR_CYPHER_ERROR,
 	SE3_FR_INVALID_SIGNATURE,
 	SE3_FR_SEEK_ERROR,
-	SE3_FR_NOT_IMPLEMENTED
+	SE3_FR_NOT_IMPLEMENTED,
+	SE3_FR_EOF
 } SE3_FRESULT;
 
 /** @brief This function opens or creates a secure file.

@@ -103,19 +103,12 @@ SE3_FRESULT secure_open(SE3_FIL* se_fp, char *path, BYTE mode, uint32_t keyID, u
 	se_fp->pointer = 0;
 	se_fp->dirty_bit = false;
 
+	res = read_sector(se_fp, 1, se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size);
 
-	if (!end_of_last_sector(se_fp))
-	{
-		//Load the first data sector if existing
-		if ((res = read_sector(se_fp, 1, se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size)))
-			return res;
-	} else
-	{
-		//otherwise create an empty one
-		se_fp->decrypt_buffer_size = 0;
-	}
-
-
+	if (res == SE3_FR_EOF)
+		se_fp -> decrypt_buffer_size = 0;
+	else if (res != SE3_FR_OK)
+		return res;
 
 	return SE3_FR_OK;
 }
@@ -271,7 +264,7 @@ SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
 	SE3_FRESULT res;
 	uint32_t remaining_data;
 	uint32_t write_pointer;
-	uint16_t byte_to_write;
+	uint16_t bytes_to_write;
 	uint16_t sector_offset;
 
 	if (!validate_file_object(se_fp))
@@ -282,10 +275,9 @@ SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
 
 	write_pointer = 0;
 	remaining_data = dataIn_len;
-	sector_offset = (uint16_t) (se_fp->pointer % SE3_FATFS_LOGIC_DATA);
 	while (remaining_data > 0)
 	{
-		if (remaining_data + sector_offset >= SE3_FATFS_LOGIC_DATA)
+		/*if (remaining_data + sector_offset >= SE3_FATFS_LOGIC_DATA)
 		{
 			byte_to_write = SE3_FATFS_LOGIC_DATA - sector_offset;
 
@@ -330,7 +322,28 @@ SE3_FRESULT secure_write(SE3_FIL* se_fp, uint8_t *dataIn, uint32_t dataIn_len)
 				se_fp->decrypt_buffer_size = sector_offset+remaining_data;
 			remaining_data = 0;
 			se_fp->dirty_bit = true;
-		}
+		}*/
+
+		sector_offset = (uint16_t) (se_fp->pointer % SE3_FATFS_LOGIC_DATA);
+
+		if (remaining_data + sector_offset >= SE3_FATFS_LOGIC_DATA)
+			bytes_to_write = SE3_FATFS_LOGIC_DATA - sector_offset;
+		else
+			bytes_to_write = remaining_data;
+
+
+		memcpy(se_fp->decrypt_buffer + sector_offset, dataIn + write_pointer, bytes_to_write);
+		if (sector_offset+bytes_to_write > se_fp->decrypt_buffer_size)
+			se_fp->decrypt_buffer_size = sector_offset+bytes_to_write;
+		se_fp->dirty_bit = true;
+
+		if ((res = set_file_pointer(se_fp, se_fp->pointer+bytes_to_write) ))
+			return res;
+
+		write_pointer += bytes_to_write;
+		remaining_data -= bytes_to_write;
+
+
 	}
 
 
@@ -477,7 +490,9 @@ SE3_FRESULT read_sector(SE3_FIL* se_fp, uint32_t sector_id, uint8_t* data, uint1
 	if ((res = (SE3_FRESULT) f_read(&(se_fp->fp), encoded_data_sector.data, SE3_FATFS_SECTOR_SIZE, &br)))
 		return res;
 
-	if (br < SE3_FATFS_SECTOR_SIZE)
+	if (br == 0)
+		return SE3_FR_EOF;
+	else if (br < SE3_FATFS_SECTOR_SIZE)
 		return SE3_FR_DATA_ENC_ERROR;
 
 	compute_IV(se_fp->IV, sector_IV, sector_id);
@@ -963,20 +978,22 @@ SE3_FRESULT set_file_pointer(SE3_FIL* se_fp, uint32_t new_pointer)
 			if ( (res = write_sector(se_fp, curr_sector)) )
 				return res;
 		}
+
+		//Create a new sector if reached end of last sector
+		res = read_sector(se_fp, target_sector, se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size);
+
+		if (res == SE3_FR_EOF)
+			se_fp -> decrypt_buffer_size = 0;
+		else if (res != SE3_FR_OK)
+			return res;
+
+		se_fp->dirty_bit = false;
 	}
 
 	//Set logic file pointer
 	se_fp->pointer = new_pointer;
 
-	//Create a new sector if reached end of last sector
-	if (end_of_last_sector(se_fp))
-		se_fp -> decrypt_buffer_size = 0;
-	else
-	{
-		//Otherwise read the target one
-		if((res = read_sector(se_fp, target_sector, se_fp->decrypt_buffer, &se_fp->decrypt_buffer_size)))
-			return res;
-	}
+
 
 	return SE3_FR_OK;
 }
