@@ -220,7 +220,7 @@ append SE3_FPGA_BITSTREAM_H "/" "se3_fpga_bitstream.h"
 set outputFile [open $SE3_FPGA_BITSTREAM_H w]
 
 # Write first part of se3_fpga_bitstream.h file
-puts $outputFile "#include <stdint.h>\n\n\nconst uint8_t __fpga_alg\[\] = {"
+puts $outputFile "#ifndef SE3_FPGA_BITSTREAM_H_\n#define SE3_FPGA_BITSTREAM_H_\n\n#include <stdint.h>\n\n\nconst uint8_t __fpga_alg\[\] = {"
 
 #************************ *_algo.c FILE ****************************
 # Open *_algo.c for reading
@@ -303,14 +303,17 @@ set flag 0
 close $inputfile
 
 # Append dimensions of _algo and _data vectors in se3_fpga_bitstream.h file
-set algoline "\n\n\nextern uint32_t g_iAlgoSize = "
+set algoline "\n\n\nuint32_t g_iAlgoSize = "
 append algoline $AlgoSize
 append algoline ";"
 puts $outputFile $algoline
 
-set dataline "extern uint32_t g_iDataSize = "
+set dataline "uint32_t g_iDataSize = "
 append dataline $DataSize
 append dataline ";"
+puts $outputFile $dataline
+
+set dataline "#endif /* SE3_FPGA_BITSTREAM_H_ */"
 puts $outputFile $dataline
 
 # Close se3_fpga_bitstream.h file

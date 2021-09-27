@@ -1,27 +1,5 @@
-/**
-  ******************************************************************************
-  * File Name          : se3_fpga_bitstream.h
-  * Description        : Bitstream to be flashed into the FPGA
-  ******************************************************************************
-  *
-  * Copyright(c) 2016-present Blu5 Group <https://www.blu5group.com>
-  *
-  * This library is free software; you can redistribute it and/or
-  * modify it under the terms of the GNU Lesser General Public
-  * License as published by the Free Software Foundation; either
-  * version 3 of the License, or (at your option) any later version.
-  *
-  * This library is distributed in the hope that it will be useful,
-  * but WITHOUT ANY WARRANTY; without even the implied warranty of
-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-  * Lesser General Public License for more details.
-  *
-  * You should have received a copy of the GNU Lesser General Public
-  * License along with this library; if not, see <https://www.gnu.org/licenses/>.
-  *
-  ******************************************************************************
-  */
-
+#ifndef SE3_FPGA_BITSTREAM_H_
+#define SE3_FPGA_BITSTREAM_H_
 
 #include <stdint.h>
 
@@ -24661,5 +24639,6 @@ const uint8_t __fpga_alg[] = {
 
 
 
-extern uint32_t g_iAlgoSize = 129857;
-extern uint32_t g_iDataSize = 239521;
+uint32_t g_iAlgoSize = 129857;
+uint32_t g_iDataSize = 239521;
+#endif /* SE3_FPGA_BITSTREAM_H_ */

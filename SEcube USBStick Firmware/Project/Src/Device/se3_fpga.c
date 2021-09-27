@@ -29,11 +29,7 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx.h"
-
-
-
-uint32_t g_iAlgoSize;
-uint32_t g_iDataSize;
+#include "fmc.h"
 
 
 /*************************************************************
@@ -1816,10 +1812,6 @@ void se3_FPGA_Reset () {
 
 }
 
-
-
-SRAM_HandleTypeDef SRAM_READ;
-SRAM_HandleTypeDef SRAM_WRITE;
 
 
 
