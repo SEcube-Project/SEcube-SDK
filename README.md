@@ -1,4 +1,4 @@
-<img src="https://www.secube.blu5group.com/site/templates/dist/img/logo.png" width="400px" />
+<div background-color:white><img src="https://www.secube.blu5group.com/site/templates/dist/img/logo.png" width="400px" /></div>
 
 # SEcube™ Software Development Kit (version 1.5.1)
 Copyright (C) 2021 Blu5 Labs Ltd.
