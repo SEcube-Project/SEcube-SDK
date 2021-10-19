@@ -1,8 +1,7 @@
 /**
   ******************************************************************************
   * File Name          : main.c
-  * Version            : SEcube SDK 1.5.1
-  * Description        : Device inizialization and main loop.
+  * Description        : Main program body
   ******************************************************************************
   *
   * COPYRIGHT(c) 2016 STMicroelectronics
@@ -33,6 +32,14 @@
   */
 /* Includes ------------------------------------------------------------------*/
 
+/**
+ *  \file main.c
+ *  \date 10/02/2021
+ *  \version SEcube SDK 1.5.1
+ *  \brief Device inizialization and main loop.
+ */
+
+
 #include "stm32f4xx_hal.h"
 #include "adc.h"
 #include "crc.h"
@@ -56,7 +63,7 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
-//Add following lines when using Keil to flash the USBStick
+//Add following tow lines when using Keil to flash the USBStick
 //uint32_t 						vectorTable_RAM[256] __attribute__(( aligned (0x200ul) ));
 //extern uint32_t 		__Vectors[];                             /* vector table ROM  */
 /* USER CODE END PV */
@@ -78,6 +85,8 @@ int main(void)
 {
 
 	/* USER CODE BEGIN 1 */
+	// Init SEcube structures
+	//uint8_t a,b,c;
 
 	/* USER CODE END 1 */
 
@@ -116,7 +125,6 @@ int main(void)
 	MX_USB_DEVICE_Init();
 	MX_CRC_Init();
 	MX_RNG_Init();
-
 
 	/* USER CODE BEGIN */
 	device_init();

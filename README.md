@@ -1,6 +1,6 @@
 <img src="https://www.secube.eu/site/templates/dist/img/logo.png" width="400px" />
 
-# SEcube™ Software Development Kit (version 1.5.1)
+# SEcube™ Software Development Kit (version 1.5.2)
 Copyright (C) 2021 Blu5 Labs Ltd.
 
 ## Licence
