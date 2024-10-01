@@ -34,6 +34,7 @@
 #include "Communication API/communication_api.h"
 #include "Provision API/provision_api.h"
 #include "L0 Base/L0_base.h"
+#include <array>
 
 const uint32_t SE3_TIMEOUT = 10000;
 

@@ -38,6 +38,7 @@
 #include "../Crypto Libraries/pbkdf2.h"
 #include "../L1_error_manager.h"
 #include "../L1_enumerations.h"
+#include <array>
 
 #ifndef B5_AES_256
 	#define B5_AES_256 32 /**< Size (in bytes) of a AES-256 key. */
